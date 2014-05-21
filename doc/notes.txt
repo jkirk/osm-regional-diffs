@@ -1,0 +1,28 @@
+Regional Diffs
+==============
+
+Minutely Diffs -> Crop (auf eine bestimmte Region) -> alle ways extrahieren -> testen ob way teil einer bicylce relation ist.
+
+Minutely Diffs
+--------------
+
+TODO: siehe notes von Michi (`links`)
+
+Crop (auf eine bestimmte Region)
+--------------------------------
+
+mit osmosis
+
+Way extrahieren
+---------------
+
+aus dem minutely diff nach "way id" greppen
+
+Relationen finden in der die "way id" enthalten sind
+----------------------------------------------------
+
+Mögliche Lösungen:
+
+* aus der gegeben Region alle Relationen auflisten und schauen ob die "way id" in einer Relation enthalten ist
+* "way id" über die overpass API abfragen und schauen ob die Relation geliefert wird.
+
