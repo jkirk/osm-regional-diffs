@@ -7,6 +7,18 @@ Minutely Diffs
 --------------
 download von http://planet.openstreetmap.org/replication/minute/000/881/
 
+Unter http://planet.openstreetmap.org/replication/minute/state.txt
+gibt es eine sech:`sequenceNumber` die anzeigt welches File das letzte
+minutely diff ist.
+
+Man muss sich merken, welche sequenceNumber man als letztes
+heruntergeladen hat und - für den Fall, dass man innerhalb des
+vorgegenben Intervalls eine sequnceNumber verpasst hat - als
+dazwischen liegende Diffs ebenfalls laden.
+
+Wenn das Skript als deamon läuft, dann kann man ein Intervall zw. 30s
+und 59s wählen um sicher zu gehen, dass man keine Diff verpasst.
+
 Einzelne Changesets
 -------------------
 download via http://www.openstreetmap.org/api/0.6/changeset/22466785/download
