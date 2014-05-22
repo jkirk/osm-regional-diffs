@@ -5,18 +5,23 @@ Minutely Diffs -> Crop (auf eine bestimmte Region) -> alle ways extrahieren -> t
 
 Minutely Diffs
 --------------
+download von http://planet.openstreetmap.org/replication/minute/000/881/
 
-TODO: siehe notes von Michi (`links`)
+Einzelne Changesets
+-------------------
+download via http://www.openstreetmap.org/api/0.6/changeset/22466785/download
 
 Crop (auf eine bestimmte Region)
 --------------------------------
-
-mit osmosis
+mit osmosis (aptitude install osmosis)
+Usage auf http://wiki.openstreetmap.org/wiki/Osmosis/Detailed_Usage
+vorarlberg-polygon als .poly-file mittels JOSM aus der Grenz-Relation abspeichern
 
 Way extrahieren
 ---------------
 
 aus dem minutely diff nach "way id" greppen
+via der way-id den way aus http://www.openstreetmap.org/api/0.6/way/30160091 als XML runterladen
 
 Relationen finden in der die "way id" enthalten sind
 ----------------------------------------------------
@@ -24,5 +29,7 @@ Relationen finden in der die "way id" enthalten sind
 Mögliche Lösungen:
 
 * aus der gegeben Region alle Relationen auflisten und schauen ob die "way id" in einer Relation enthalten ist
+    die Relationen regelmäßig mittels overpass herunterladen
 * "way id" über die overpass API abfragen und schauen ob die Relation geliefert wird.
+    http://wiki.openstreetmap.org/wiki/Overpass_API/Language_Guide#Relations_2
 
