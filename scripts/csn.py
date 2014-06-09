@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 
-import urllib, urllib2, re, sys
+import urllib, urllib2, re, sys, gzip
 
 # download stats.txt and extract current sequence number
 base_minurl = 'http://planet.openstreetmap.org/replication/minute/000/'
@@ -24,4 +24,10 @@ print minutelyDiffUrl
 
 print "VERBOSE: Downloading " + minutelyDiffFilename + "..."
 urllib.urlretrieve(minutelyDiffUrl, minutelyDiffFilename)
+
+print "VERBOSE: Content of " + minutelyDiffFilename + ":"
+f = gzip.open(minutelyDiffFilename, 'rb')
+file_content = f.read()
+f.close()
+print file_content
 
