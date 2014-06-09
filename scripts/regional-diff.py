@@ -39,6 +39,8 @@ def getCurrentSequenceNumber():
 
 def splitSequenceNumber(currentSequenceNumber):
     m = re.search('(...)(...)', currentSequenceNumber)
+    if not m:
+        raise Exception("Current Sequence Number can not be extracted! Please check state.txt file manually.")
     return m
 
 if __name__ == '__main__':
