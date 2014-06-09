@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import argparse, urllib2, re
+import argparse, urllib, urllib2, re, gzip
 
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -27,9 +27,11 @@ class PlanetOsm:
     # TODO: figure out what happens when 000 changes. Currently (2014-06-09)
     # state.txt does not show 000 in it.
     __replication_url = 'http://planet.openstreetmap.org/replication/'
-    __minutely_url = __replication_url + "minute/"
-    __state_url = __minutely_url + "state.txt"
+    __minutely_base_url = __replication_url + "minute/"
+    __minutely_url = __minutely_base_url + "000/"
+    __state_url = __minutely_base_url + "state.txt"
     __content_state = ""
+    __content_diff = ""
 
     sequenceNumber = ""
 
@@ -40,18 +42,31 @@ class PlanetOsm:
         response = urllib2.urlopen(self.__state_url)
         self.__content_state = response.read()
         verboseprint("VERBOSE: Content of state.txt:\n", self.__content_state)
-
-    def __readStateFile(self):
         self.sequenceNumber = self.__getCurrentSequenceNumber()
 
     def __getCurrentSequenceNumber(self):
         sequenceNumberLine = re.findall('.*sequenceNumber=\d*', self.__content_state)[0]
         return re.split('=', sequenceNumberLine)[1]
 
+    def __downloadDiffFile(self):
+        minutelyDiffFilename = self.splitSequenceNumber(2) + ".osc.gz"
+        minutelyDiffUrl = self.__minutely_url + self.splitSequenceNumber(1) + "/" + minutelyDiffFilename
+
+        verboseprint("VERBOSE: URL of latest minutely diff:", minutelyDiffUrl)
+        verboseprint("VERBOSE: Downloading " + minutelyDiffFilename + "...")
+
+        urllib.urlretrieve(minutelyDiffUrl, minutelyDiffFilename)
+
+        f = gzip.open(minutelyDiffFilename, 'rb')
+        self.__content_diff = f.read()
+        f.close()
+        verboseprint("VERBOSE: Content of " + minutelyDiffFilename + ":")
+        verboseprint(self.__content_diff)
+
     # download state.txt and update all variables
     def update(self):
         self.__downloadStateFile()
-        self.__readStateFile()
+        self.__downloadDiffFile()
 
     def splitSequenceNumber(self, x):
         m = re.search('(...)(...)', self.sequenceNumber)
