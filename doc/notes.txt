@@ -13,7 +13,7 @@ minutely diff ist.
 
 Man muss sich merken, welche sequenceNumber man als letztes
 heruntergeladen hat und - für den Fall, dass man innerhalb des
-vorgegenben Intervalls eine sequnceNumber verpasst hat - als
+vorgegenben Intervalls eine sequnceNumber verpasst hat - alle
 dazwischen liegende Diffs ebenfalls laden.
 
 Wenn das Skript als deamon läuft, dann kann man ein Intervall zw. 30s
