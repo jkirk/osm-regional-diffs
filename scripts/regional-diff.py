@@ -37,6 +37,11 @@ def getCurrentSequenceNumber():
     sequenceNumber = re.findall('.*sequenceNumber=\d*', html)[0]
     return re.split('=', sequenceNumber)[1]
 
+def splitSequenceNumber(currentSequenceNumber):
+    m = re.search('(...)(...)', currentSequenceNumber)
+    return m
+
 if __name__ == '__main__':
-    print "CurrentSequenceNumber: " + getCurrentSequenceNumber()
+    currentSequenceNumber = getCurrentSequenceNumber()
+    print "Split sequence number: " + splitSequenceNumber(currentSequenceNumber).group(1) + ":" + splitSequenceNumber(currentSequenceNumber).group(2)
 
