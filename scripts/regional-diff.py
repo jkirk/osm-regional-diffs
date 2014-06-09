@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse, urllib, urllib2, re, gzip
+from lxml import etree
 
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -33,6 +34,7 @@ class PlanetOsm:
     __content_state = ""
     __content_diff = ""
 
+    __ways = []
     sequenceNumber = ""
 
     def __init__(self):
@@ -49,8 +51,8 @@ class PlanetOsm:
         return re.split('=', sequenceNumberLine)[1]
 
     def __downloadDiffFile(self):
-        minutelyDiffFilename = self.splitSequenceNumber(2) + ".osc.gz"
-        minutelyDiffUrl = self.__minutely_url + self.splitSequenceNumber(1) + "/" + minutelyDiffFilename
+        minutelyDiffFilename = self.__splitSequenceNumber(2) + ".osc.gz"
+        minutelyDiffUrl = self.__minutely_url + self.__splitSequenceNumber(1) + "/" + minutelyDiffFilename
 
         verboseprint("VERBOSE: URL of latest minutely diff:", minutelyDiffUrl)
         verboseprint("VERBOSE: Downloading " + minutelyDiffFilename + "...")
@@ -63,17 +65,39 @@ class PlanetOsm:
         verboseprint("VERBOSE: Content of " + minutelyDiffFilename + ":")
         verboseprint(self.__content_diff)
 
-    # download state.txt and update all variables
-    def update(self):
-        self.__downloadStateFile()
-        self.__downloadDiffFile()
+    def __readWayNodes(self):
+        verboseprint("VERBOSE: parsing XML...")
+        root = etree.fromstring(self.__content_diff)
 
-    def splitSequenceNumber(self, x):
+        verboseprint("VERBOSE: modified way ids...")
+        # iterate through all changesets (which should be "modify", "delete" or "create")
+        for changeset in root:
+            if changeset.tag == "modify" or changeset.tag == "delete" or changeset.tag == "create":
+                # we are only interested in ways
+                for item in changeset:
+                    if item.tag == "way":
+                        verboseprint(item.attrib["id"])
+                        self.__ways.append(item.attrib["id"])
+            else:
+                print "WARNING: found new change type: " + changeset.tag
+
+    def __splitSequenceNumber(self, x):
         m = re.search('(...)(...)', self.sequenceNumber)
         if not m:
             raise Exception("Current Sequence Number can not be extracted! Please check state.txt file manually.")
         return m.group(x)
 
+    # download state.txt and diff file and update all variables
+    def update(self):
+        self.__downloadStateFile()
+        self.__downloadDiffFile()
+        self.__readWayNodes()
+
+    def printWayIds(self):
+        for way in self.__ways:
+            print way
+
 if __name__ == '__main__':
     posm = PlanetOsm()
-    print posm.splitSequenceNumber(2)
+    posm.printWayIds()
+
