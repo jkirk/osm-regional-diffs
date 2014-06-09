@@ -9,12 +9,6 @@ planet.openstreetmap.org - replication diff file',
                 epilog='''
 ''')
 
-# TODO: figure out what happens when 000 changes. Currently (2014-06-09)
-# state.txt does not show 000 in it.
-replication_url = 'http://planet.openstreetmap.org/replication/'
-minutely_url = replication_url + "minute/"
-state_url = minutely_url + "state.txt"
-
 parser.add_argument("--verbose", action="store_true", help="increase verbosity")
 args = parser.parse_args()
 
@@ -29,21 +23,42 @@ if args.verbose:
 else:   
     verboseprint = lambda *a: None      # do-nothing function
 
-# download stats.txt and extract current sequence number
-def getCurrentSequenceNumber():
-    response = urllib2.urlopen(state_url)
-    html = response.read()
-    verboseprint("VERBOSE: Content of state.txt:\n", html)
-    sequenceNumber = re.findall('.*sequenceNumber=\d*', html)[0]
-    return re.split('=', sequenceNumber)[1]
+class PlanetOsm:
+    # TODO: figure out what happens when 000 changes. Currently (2014-06-09)
+    # state.txt does not show 000 in it.
+    __replication_url = 'http://planet.openstreetmap.org/replication/'
+    __minutely_url = __replication_url + "minute/"
+    __state_url = __minutely_url + "state.txt"
+    __content_state = ""
 
-def splitSequenceNumber(currentSequenceNumber):
-    m = re.search('(...)(...)', currentSequenceNumber)
-    if not m:
-        raise Exception("Current Sequence Number can not be extracted! Please check state.txt file manually.")
-    return m
+    sequenceNumber = ""
+
+    def __init__(self):
+        self.update()
+
+    def __downloadStateFile(self):
+        response = urllib2.urlopen(self.__state_url)
+        self.__content_state = response.read()
+        verboseprint("VERBOSE: Content of state.txt:\n", self.__content_state)
+
+    def __readStateFile(self):
+        self.sequenceNumber = self.__getCurrentSequenceNumber()
+
+    def __getCurrentSequenceNumber(self):
+        sequenceNumberLine = re.findall('.*sequenceNumber=\d*', self.__content_state)[0]
+        return re.split('=', sequenceNumberLine)[1]
+
+    # download state.txt and update all variables
+    def update(self):
+        self.__downloadStateFile()
+        self.__readStateFile()
+
+    def splitSequenceNumber(self, x):
+        m = re.search('(...)(...)', self.sequenceNumber)
+        if not m:
+            raise Exception("Current Sequence Number can not be extracted! Please check state.txt file manually.")
+        return m.group(x)
 
 if __name__ == '__main__':
-    currentSequenceNumber = getCurrentSequenceNumber()
-    print "Split sequence number: " + splitSequenceNumber(currentSequenceNumber).group(1) + ":" + splitSequenceNumber(currentSequenceNumber).group(2)
-
+    posm = PlanetOsm()
+    print posm.splitSequenceNumber(2)
