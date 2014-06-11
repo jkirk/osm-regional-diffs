@@ -29,11 +29,33 @@ mit osmosis (aptitude install osmosis)
 Usage auf http://wiki.openstreetmap.org/wiki/Osmosis/Detailed_Usage
 vorarlberg-polygon als .poly-file mittels JOSM aus der Grenz-Relation abspeichern
 
+Cleaned hourly changeset (solved merge conflicts)
+-------------------------------------------------
+
+osmosis --read-xml-change 291.osc outPipe.0="change" --simplify-change inPipe.0="change" --write-xml-change 291-clean.osc
+
+Umwandeln eines Changesets in ein OSM-File
+------------------------------------------
+
+osmosis --read-empty outPipe.0="mypipe" --read-xml-change 291-clean.osc outPipe.0="change" --apply-change inPipe.0="mypipe" inPipe.1="change" --write-xml 291.osm
+
+Crop des OSM-Files auf ein bounding polygon (vorarlberg.poly)
+-------------------------------------------------------------
+
+osmosis --read-xml file="291.osm" outPipe.0="change" --bounding-polygon inPipe.0="change" file="vorarlberg.poly" --write-xml 291-cropped.osm
+
 Way extrahieren
 ---------------
 
-aus dem minutely diff nach "way id" greppen
+aus dem (cropted) minutely diff nach "way id" greppen
 via der way-id den way aus http://www.openstreetmap.org/api/0.6/way/30160091 als XML runterladen
+
+Download Map von Vorarlberg
+---------------------------
+
+http://overpass-api.de/api/map?bbox=9.5375,46.8417,10.2421,47.5968
+
+http://overpass.osm.rambler.ru/cgi/interpreter?data=rel(46.8417,9.5375,47.5968,10.2421);out;
 
 Relationen finden in der die "way id" enthalten sind
 ----------------------------------------------------
