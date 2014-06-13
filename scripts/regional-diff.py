@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
-import argparse, urllib, urllib2, re, gzip
+import argparse, urllib, urllib2, re, gzip, subprocess, os, sys, shlex
 from lxml import etree
 
+osmosis_bin = "/usr/bin/osmosis"
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
                 description='Print all way ids of the latest \
@@ -44,9 +45,10 @@ class PlanetOsm:
         self.update()
 
     def __downloadStateFile(self):
+        verboseprint("VERBOSE: Downloading state.txt...")
         response = urllib2.urlopen(self.__state_url)
         self.__content_state = response.read()
-        verboseprint("VERBOSE: Content of state.txt:\n", self.__content_state)
+        # verboseprint("VERBOSE: Content of state.txt:\n", self.__content_state)
         self.sequenceNumber = self.__getCurrentSequenceNumber()
 
     def __getCurrentSequenceNumber(self):
@@ -66,8 +68,23 @@ class PlanetOsm:
         f = gzip.open(self.__minutelyDiffFilename, 'rb')
         self.__content_diff = f.read()
         f.close()
-        verboseprint("VERBOSE: Content of " + self.__minutelyDiffFilename + ":")
-        verboseprint(self.__content_diff)
+        # verboseprint("VERBOSE: Content of " + self.__minutelyDiffFilename + ":")
+        # verboseprint(self.__content_diff)
+
+    def __osmosis(self):
+        if not os.path.isfile(osmosis_bin):
+            return
+
+        args = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
+--simplify-change inPipe.0="change" outPipe.0="cleaned" \
+--read-empty outPipe.0="empty" --apply-change inPipe.0="empty" \
+inPipe.1="cleaned" outPipe.0="osm" --bounding-polygon \
+inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
+
+        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        cropped_diff = p.communicate(self.__content_diff)
+        p.stdin.close()
+        self.__content_diff = cropped_diff[0]
 
     def __readWayNodes(self):
         verboseprint("VERBOSE: parsing XML...")
@@ -101,6 +118,7 @@ class PlanetOsm:
             self.__downloadDiffFile()
 
         self.__loadDiffFile()
+        self.__osmosis()
         self.__readWayNodes()
 
     def printWayIds(self):
