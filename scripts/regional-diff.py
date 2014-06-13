@@ -5,12 +5,14 @@ from lxml import etree
 
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
-                description='Print all way ids of latest \
-planet.openstreetmap.org - replication diff file',
+                description='Print all way ids of the latest \
+minutely replication diff file from planet.openstreetmap.org ',
                 epilog='''
 ''')
 
-parser.add_argument("--verbose", action="store_true", help="increase verbosity")
+parser.add_argument("-v", "--verbose", action="store_true", help="increase verbosity")
+parser.add_argument("-f", "--file", action="store", help="use local osc.gz file \
+(instead of downloading the latest file")
 args = parser.parse_args()
 
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
@@ -30,6 +32,7 @@ class PlanetOsm:
     __replication_url = 'http://planet.openstreetmap.org/replication/'
     __minutely_base_url = __replication_url + "minute/"
     __minutely_url = __minutely_base_url + "000/"
+    __minutelyDiffFilename = ""
     __state_url = __minutely_base_url + "state.txt"
     __content_state = ""
     __content_diff = ""
@@ -51,18 +54,19 @@ class PlanetOsm:
         return re.split('=', sequenceNumberLine)[1]
 
     def __downloadDiffFile(self):
-        minutelyDiffFilename = self.__splitSequenceNumber(2) + ".osc.gz"
-        minutelyDiffUrl = self.__minutely_url + self.__splitSequenceNumber(1) + "/" + minutelyDiffFilename
+        self.__minutelyDiffFilename = self.__splitSequenceNumber(2) + ".osc.gz"
+        minutelyDiffUrl = self.__minutely_url + self.__splitSequenceNumber(1) + "/" + self.__minutelyDiffFilename
 
         verboseprint("VERBOSE: URL of latest minutely diff:", minutelyDiffUrl)
-        verboseprint("VERBOSE: Downloading " + minutelyDiffFilename + "...")
+        verboseprint("VERBOSE: Downloading " + self.__minutelyDiffFilename + "...")
 
-        urllib.urlretrieve(minutelyDiffUrl, minutelyDiffFilename)
+        urllib.urlretrieve(minutelyDiffUrl, self.__minutelyDiffFilename)
 
-        f = gzip.open(minutelyDiffFilename, 'rb')
+    def __loadDiffFile(self):
+        f = gzip.open(self.__minutelyDiffFilename, 'rb')
         self.__content_diff = f.read()
         f.close()
-        verboseprint("VERBOSE: Content of " + minutelyDiffFilename + ":")
+        verboseprint("VERBOSE: Content of " + self.__minutelyDiffFilename + ":")
         verboseprint(self.__content_diff)
 
     def __readWayNodes(self):
@@ -89,8 +93,14 @@ class PlanetOsm:
 
     # download state.txt and diff file and update all variables
     def update(self):
-        self.__downloadStateFile()
-        self.__downloadDiffFile()
+        if args.file:
+            verboseprint("VERBOSE: skipping download. Using localfile: " + args.file)
+            self.__minutelyDiffFilename = args.file
+        else:
+            self.__downloadStateFile()
+            self.__downloadDiffFile()
+
+        self.__loadDiffFile()
         self.__readWayNodes()
 
     def printWayIds(self):
