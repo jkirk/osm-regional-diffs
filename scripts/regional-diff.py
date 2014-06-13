@@ -89,18 +89,27 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
     def __readWayNodes(self):
         verboseprint("VERBOSE: parsing XML...")
         root = etree.fromstring(self.__content_diff)
-
-        verboseprint("VERBOSE: modified way ids...")
-        # iterate through all changesets (which should be "modify", "delete" or "create")
-        for changeset in root:
-            if changeset.tag == "modify" or changeset.tag == "delete" or changeset.tag == "create":
-                # we are only interested in ways
-                for item in changeset:
-                    if item.tag == "way":
-                        verboseprint(item.attrib["id"])
-                        self.__ways.append(item.attrib["id"])
-            else:
-                print "WARNING: found new change type: " + changeset.tag
+        if root.tag == "osmChange":
+            verboseprint("VERBOSE: Detected osmChange file")
+            verboseprint("VERBOSE: modified way ids...")
+            # iterate through all changesets (which should be "modify", "delete" or "create")
+            for changeset in root:
+                if changeset.tag == "modify" or changeset.tag == "delete" or changeset.tag == "create":
+                    # we are only interested in ways
+                    for item in changeset:
+                        if item.tag == "way":
+                            self.__ways.append(item.attrib["id"])
+                else:
+                    print "WARNING: found new change type: " + changeset.tag
+        elif root.tag == "osm":
+            verboseprint("VERBOSE: Detected osm file")
+            verboseprint("VERBOSE: way ids...")
+            for item in root:
+                if item.tag == "way":
+                    self.__ways.append(item.attrib["id"])
+        else:
+            print "ERROR: not an osm oder osm-change file"
+            os.system(2)
 
     def __splitSequenceNumber(self, x):
         m = re.search('(...)(...)', self.sequenceNumber)
