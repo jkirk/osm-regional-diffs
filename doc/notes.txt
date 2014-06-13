@@ -44,6 +44,11 @@ Crop des OSM-Files auf ein bounding polygon (vorarlberg.poly)
 
 osmosis --read-xml file="291.osm" outPipe.0="change" --bounding-polygon inPipe.0="change" file="vorarlberg.poly" --write-xml 291-cropped.osm
 
+Putting it all together (clean (from merge conflicts) -> convert osc to osm -> crop osm to vorarlberg
+-----------------------------------------------------------------------------------------------------
+
+osmosis --read-xml-change 291.osc outPipe.0="change" --simplify-change inPipe.0="change" outPipe.0="cleaned" --read-empty outPipe.0="empty" --apply-change inPipe.0="empty" inPipe.1="cleaned" outPipe.0="osm" --bounding-polygon inPipe.0="osm" file="vorarlberg.poly" --write-xml -
+
 Way extrahieren
 ---------------
 
