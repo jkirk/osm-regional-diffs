@@ -12,7 +12,7 @@ class MyHTMLParser(HTMLParser):
     def handle_data(self, data):
         print "Encountered some data  :", data
 
-class PartOfParser(HTMLParser):
+class RelationParser(HTMLParser):
     __is_h4 = False
     __is_part_of = False
     __is_part_of_ul = False
@@ -28,7 +28,8 @@ class PartOfParser(HTMLParser):
         if tag == "a" and self.__is_part_of_ul:
             self.__is_part_of_ul_a = True
             for attr in attrs:
-                print attr[1]
+                m = re.search('.*\/(.*)', attr[1])
+                print m.group(1)
     def handle_endtag(self, tag):
         if tag == "h4":
             self.__is_h4 = False
@@ -45,6 +46,6 @@ class PartOfParser(HTMLParser):
 response = urllib2.urlopen("http://www.openstreetmap.org/way/30245439")
 waycontent = response.read()
 
-parser = PartOfParser()
+parser = RelationParser()
 parser.feed(waycontent)
 
