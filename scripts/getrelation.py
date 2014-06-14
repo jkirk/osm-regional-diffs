@@ -15,19 +15,32 @@ class MyHTMLParser(HTMLParser):
 class PartOfParser(HTMLParser):
     __is_h4 = False
     __is_part_of = False
+    __is_part_of_ul = False
+    __is_part_of_ul_a = False
 
     def handle_starttag(self, tag, attrs):
         if tag == "h4":
+            self.__is_part_of = False
             self.__is_h4 = True
-            print "Encountered a start tag:", tag
+        if tag == "ul":
+            if self.__is_part_of:
+                self.__is_part_of_ul = True
+        if tag == "a" and self.__is_part_of_ul:
+            self.__is_part_of_ul_a = True
+            for attr in attrs:
+                print attr[1]
     def handle_endtag(self, tag):
         if tag == "h4":
             self.__is_h4 = False
-            print "Encountered an end tag :", tag
+        if tag == "ul":
+            self.__is_part_of_ul = False
+        if tag == "a" and self.__is_part_of_ul:
+            self.__is_part_of_ul_a = False
+
     def handle_data(self, data):
         if self.__is_h4:
             if data == "Part of":
-                print data
+                self.__is_part_of = True
 
 response = urllib2.urlopen("http://www.openstreetmap.org/way/30245439")
 waycontent = response.read()
