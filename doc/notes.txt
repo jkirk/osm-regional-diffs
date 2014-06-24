@@ -124,3 +124,26 @@ To test a list of relations ids::
   relation(3814846)[route=bicycle];
   out ids;
 
+To find all bicycle route-relations from a list of way id::
+
+  (
+    way(30245439);
+    way(31347480);
+  );
+  (<;)->.routes;
+  relation.routes[route="bicycle"];
+  out ids;
+
+*  http://overpass-turbo.eu/s/3TT
+
+Because overpass QL works with the default set *_* naming the set *routes* was not necessary.
+I could have been written simpler (but less readable)::
+
+  (
+    way(30245439);
+    way(31347480);
+  );
+  <;
+  relation._[route="bicycle"];
+  out ids;
+
