@@ -72,3 +72,55 @@ Mögliche Lösungen:
 * "way id" über die overpass API abfragen und schauen ob die Relation geliefert wird.
     http://wiki.openstreetmap.org/wiki/Overpass_API/Language_Guide#Relations_2
 
+Retrieve relation ids of way with overpass API
+----------------------------------------------
+
+* http://overpass-api.de/api/convert?data=way%2830245439%29%3B%0A%3C%3B%0Aout%20ids%3B&target=mapql
+* http://overpass-turbo.eu/s/3TM
+
+::
+  way(30245439);
+  <;
+  out ids;
+
+For multiple way ids do the following::
+
+  way(31347480);
+  <;
+  out ids;
+  way(30245439);
+  <;
+  out ids;
+
+* http://overpass-turbo.eu/s/3TP
+
+Find relation ids which are bicylce routes
+------------------------------------------
+
+::
+  relation[route=bicycle];
+  out ids;
+
+To test a list of relations ids::
+
+  relation(421088)[route=bicycle];
+  out ids;
+  relation(937246)[route=bicycle];
+  out ids;
+  relation(1745069)[route=bicycle];
+  out ids;
+  relation(1753434)[route=bicycle];
+  out ids;
+  relation(1753469)[route=bicycle];
+  out ids;
+  relation(1820015)[route=bicycle];
+  out ids;
+  relation(1820016)[route=bicycle];
+  out ids;
+  relation(1758896)[route=bicycle];
+  out ids;
+  relation(3812436)[route=bicycle];
+  out ids;
+  relation(3814846)[route=bicycle];
+  out ids;
+
