@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 import argparse, urllib, urllib2, re, gzip, subprocess, os, sys, shlex
 from lxml import etree
 
@@ -19,11 +20,9 @@ args = parser.parse_args()
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
 if args.verbose:
     def verboseprint(*args):
-            # Print each argument separately so caller doesn't need to
-            # stuff everything to be printed into a single string
-            for arg in args:
-               print arg,
-            print
+        # Print each argument separately so caller doesn't need to
+        # stuff everything to be printed into a single string
+        print ("VERBOSE:", *args, file=sys.stderr)
 else:   
     verboseprint = lambda *a: None      # do-nothing function
 
@@ -45,10 +44,10 @@ class PlanetOsm:
         self.update()
 
     def __downloadStateFile(self):
-        verboseprint("VERBOSE: Downloading state.txt...")
+        verboseprint("Downloading state.txt...")
         response = urllib2.urlopen(self.__state_url)
         self.__content_state = response.read()
-        # verboseprint("VERBOSE: Content of state.txt:\n", self.__content_state)
+        # verboseprint("Content of state.txt:\n", self.__content_state)
         self.sequenceNumber = self.__getCurrentSequenceNumber()
 
     def __getCurrentSequenceNumber(self):
@@ -59,8 +58,8 @@ class PlanetOsm:
         self.__minutelyDiffFilename = self.__splitSequenceNumber(2) + ".osc.gz"
         minutelyDiffUrl = self.__minutely_url + self.__splitSequenceNumber(1) + "/" + self.__minutelyDiffFilename
 
-        verboseprint("VERBOSE: URL of latest minutely diff:", minutelyDiffUrl)
-        verboseprint("VERBOSE: Downloading " + self.__minutelyDiffFilename + "...")
+        verboseprint("URL of latest minutely diff:", minutelyDiffUrl)
+        verboseprint("Downloading " + self.__minutelyDiffFilename + "...")
 
         urllib.urlretrieve(minutelyDiffUrl, self.__minutelyDiffFilename)
 
@@ -68,7 +67,7 @@ class PlanetOsm:
         f = gzip.open(self.__minutelyDiffFilename, 'rb')
         self.__content_diff = f.read()
         f.close()
-        # verboseprint("VERBOSE: Content of " + self.__minutelyDiffFilename + ":")
+        # verboseprint("Content of " + self.__minutelyDiffFilename + ":")
         # verboseprint(self.__content_diff)
 
     def __osmosis(self):
@@ -87,11 +86,11 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         self.__content_diff = cropped_diff[0]
 
     def __readWayNodes(self):
-        verboseprint("VERBOSE: parsing XML...")
+        verboseprint("parsing XML...")
         root = etree.fromstring(self.__content_diff)
         if root.tag == "osmChange":
-            verboseprint("VERBOSE: Detected osmChange file")
-            verboseprint("VERBOSE: modified way ids...")
+            verboseprint("Detected osmChange file")
+            verboseprint("modified way ids...")
             # iterate through all changesets (which should be "modify", "delete" or "create")
             for changeset in root:
                 if changeset.tag == "modify" or changeset.tag == "delete" or changeset.tag == "create":
@@ -100,15 +99,15 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
                         if item.tag == "way":
                             self.__ways.append(item.attrib["id"])
                 else:
-                    print "WARNING: found new change type: " + changeset.tag
+                    print ("WARNING: found new change type: " + changeset.tag)
         elif root.tag == "osm":
-            verboseprint("VERBOSE: Detected osm file")
-            verboseprint("VERBOSE: way ids...")
+            verboseprint("Detected osm file")
+            verboseprint("way ids...")
             for item in root:
                 if item.tag == "way":
                     self.__ways.append(item.attrib["id"])
         else:
-            print "ERROR: not an osm oder osm-change file"
+            print ("ERROR: not an osm oder osm-change file")
             os.system(2)
 
     def __splitSequenceNumber(self, x):
@@ -120,7 +119,7 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
     # download state.txt and diff file and update all variables
     def update(self):
         if args.file:
-            verboseprint("VERBOSE: skipping download. Using localfile: " + args.file)
+            verboseprint("skipping download. Using localfile: " + args.file)
             self.__minutelyDiffFilename = args.file
         else:
             self.__downloadStateFile()
@@ -132,7 +131,7 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
 
     def printWayIds(self):
         for way in self.__ways:
-            print way
+            print (way)
 
 if __name__ == '__main__':
     posm = PlanetOsm()
