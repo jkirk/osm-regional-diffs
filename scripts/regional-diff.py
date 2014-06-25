@@ -97,7 +97,9 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
                     # we are only interested in ways
                     for item in changeset:
                         if item.tag == "way":
-                            self.__ways.append(item.attrib["id"])
+                            self.__ways.append("way" + item.attrib["id"])
+                        elif item.tag == "relation":
+                            self.__ways.append("relation" + item.attrib["id"])
                 else:
                     print ("WARNING: found new change type: " + changeset.tag)
         elif root.tag == "osm":
@@ -105,7 +107,10 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
             verboseprint("way ids...")
             for item in root:
                 if item.tag == "way":
-                    self.__ways.append(item.attrib["id"])
+                    self.__ways.append("way" + item.attrib["id"])
+                elif item.tag == "relation":
+                    self.__ways.append("relation" + item.attrib["id"])
+
         else:
             print ("ERROR: not an osm oder osm-change file")
             os.system(2)
