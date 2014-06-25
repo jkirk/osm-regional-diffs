@@ -16,6 +16,8 @@ diff file)',
 parser.add_argument("-v", "--verbose", action="store_true", help="increase verbosity")
 parser.add_argument("-f", "--file", action="store", help="use local osc.gz file \
 (instead of downloading the latest file")
+parser.add_argument("--ids-only", action="store_true", help="just print way and \
+relation IDs from given diff file (default)")
 args = parser.parse_args()
 
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
@@ -39,6 +41,7 @@ class PlanetOsm:
     __content_diff = ""
 
     __ways = []
+    __relations = []
     sequenceNumber = ""
 
     def __init__(self):
@@ -101,9 +104,9 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
                     # we are only interested in ways
                     for item in changeset:
                         if item.tag == "way":
-                            self.__ways.append("way" + item.attrib["id"])
+                            self.__ways.append(item.attrib["id"])
                         elif item.tag == "relation":
-                            self.__ways.append("relation" + item.attrib["id"])
+                            self.__relations.append(item.attrib["id"])
                 else:
                     print ("WARNING: found new change type: " + changeset.tag)
         elif root.tag == "osm":
@@ -111,9 +114,9 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
             verboseprint("way ids...")
             for item in root:
                 if item.tag == "way":
-                    self.__ways.append("way" + item.attrib["id"])
+                    self.__ways.append(item.attrib["id"])
                 elif item.tag == "relation":
-                    self.__ways.append("relation" + item.attrib["id"])
+                    self.__relations.append(item.attrib["id"])
 
         else:
             print ("ERROR: not an osm oder osm-change file")
@@ -140,9 +143,18 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
 
     def printWayIds(self):
         for way in self.__ways:
-            print (way)
+            print ("way" + way)
+
+    def printRelationIds(self):
+        for relation in self.__relations:
+            print ("relation" + relation)
+
+    def printIds(self):
+        self.printWayIds()
+        self.printRelationIds()
 
 if __name__ == '__main__':
     posm = PlanetOsm()
-    posm.printWayIds()
+    # if args.ids_only:
+    posm.printIds()
 
