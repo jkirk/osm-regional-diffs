@@ -7,8 +7,9 @@ from lxml import etree
 osmosis_bin = "/usr/bin/osmosis"
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
-                description='Print all way ids of the latest \
-minutely replication diff file from planet.openstreetmap.org ',
+                description='Print all way and relation IDs from Vorarlberg of the latest \
+minutely replication diff file from planet.openstreetmap.org (or by a given \
+diff file)',
                 epilog='''
 ''')
 
@@ -47,7 +48,8 @@ class PlanetOsm:
         verboseprint("Downloading state.txt...")
         response = urllib2.urlopen(self.__state_url)
         self.__content_state = response.read()
-        # verboseprint("Content of state.txt:\n", self.__content_state)
+        verboseprint("Timestamp of state.txt:", self.__content_state.splitlines()[0])
+        verboseprint("Sequencenumber of state.txt:", self.__content_state.splitlines()[1])
         self.sequenceNumber = self.__getCurrentSequenceNumber()
 
     def __getCurrentSequenceNumber(self):
