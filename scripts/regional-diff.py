@@ -74,13 +74,15 @@ class PlanetOsm:
         if not os.path.isfile(osmosis_bin):
             return
 
+        devnull = open('/dev/null', 'w')
         args = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
 --simplify-change inPipe.0="change" outPipe.0="cleaned" \
 --read-empty outPipe.0="empty" --apply-change inPipe.0="empty" \
 inPipe.1="cleaned" outPipe.0="osm" --bounding-polygon \
 inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
 
-        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
+        devnull.close()
         cropped_diff = p.communicate(self.__content_diff)
         p.stdin.close()
         self.__content_diff = cropped_diff[0]
