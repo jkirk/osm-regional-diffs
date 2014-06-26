@@ -204,10 +204,20 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         ql = OverpassQL(self.__ways, self.__relations)
         print (ql.getBikewaysAndRelations())
 
+    def printCompactOverpassQL(self):
+        ql = OverpassQL(self.__ways, self.__relations)
+        print (re.sub(r'(;|\() *', r'\1', ql.getBikewaysAndRelations().replace('\n', '')))
+
+    def printOverpassQLUrl(self):
+        ql = OverpassQL(self.__ways, self.__relations)
+        print ("http://overpass-api.de/api/interpreter?data=" + re.sub(r'(;|\() *', r'\1', ql.getBikewaysAndRelations().replace('\n', '')))
+
+
 if __name__ == '__main__':
     posm = PlanetOsm()
     if args.ids_only:
       posm.printIds()
     else:
-      posm.printOverpassQL()
+      posm.printCompactOverpassQL()
+      posm.printOverpassQLUrl()
 
