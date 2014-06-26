@@ -147,3 +147,36 @@ I could have been written simpler (but less readable)::
   relation._[route="bicycle"];
   out ids;
 
+Show only ways (from a given list of ways) which are part of a bicycle route
+----------------------------------------------------------------------------
+
+::
+
+  (
+    way(30245439); // Unterer Illrain (highway=track / bicycle=yes)
+    way(31347480); // Gielgenstraße (highway = residental) not part of bicycle route
+    way(60638588); // part of 3 bicycle routes
+    way(200568747); // motorway
+  );
+  rel(bw)[route="bicycle"]->.cycleroutes;
+  // (.cycleroutes >;)->.cycleways;
+  way(r.cycleroutes)->.cycleways;
+  (
+    way.cycleways(30245439);
+    way.cycleways(31347480);
+    way.cycleways(60638588);
+    way.cycleways(200568747);
+  )->.result;
+  .result out meta;
+
+*union* the ways to a set. *rel(bw)* will select relations that have way members from the input set.
+*[route="bicylce"]* will find all relations with *route=bicycle* and the set is saved in the set *.cycleroutes*.
+*.cycleroutes >;* recurses down the from the given relations and this output will be saved in the set *.cycleways*.
+
+.. note::
+
+  *(.cycleroutes >;)->.cycleways;* would provide all nodes too. A more effient
+  way for our task is to select only the parent ways for all nodes from the input
+  set with *way(bn*);
+
+
