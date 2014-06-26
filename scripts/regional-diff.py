@@ -14,8 +14,11 @@ from planet.openstreetmap.org (or by a given diff file)',
 ''')
 
 parser.add_argument("-v", "--verbose", action="store_true", help="increase verbosity")
-parser.add_argument("-f", "--file", action="store", help="use local osc.gz file \
+filegroup = parser.add_mutually_exclusive_group()
+filegroup.add_argument("-f", "--file", action="store", help="use local osc.gz file \
 (instead of downloading the latest file")
+filegroup.add_argument("--osmfile", action="store", help="use local osm file \
+(from osmosis or overpass API")
 parser.add_argument("--ids-only", action="store_true", help="just print way and \
 relation IDs from given diff")
 args = parser.parse_args()
@@ -122,6 +125,11 @@ class PlanetOsm:
         # verboseprint("Content of " + self.__minutelyDiffFilename + ":")
         # verboseprint(self.__content_diff)
 
+    def __loadOsmFile(self):
+        f = open(self.__minutelyOsmFilename, 'rb')
+        self.__content_diff = f.read()
+        f.close()
+
     def __osmosis(self):
         if not os.path.isfile(osmosis_bin):
             return
@@ -178,14 +186,21 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
     # download state.txt and diff file and update all variables
     def update(self):
         if args.file:
-            verboseprint("skipping download. Using localfile: " + args.file)
+            verboseprint("skipping download. Using local diff file (.osc.gz): " + args.file)
             self.__minutelyDiffFilename = args.file
+        elif args.osmfile:
+            verboseprint("skipping download. Using local osm file (.osm): " + args.osmfile)
+            self.__minutelyOsmFilename = args.osmfile
         else:
             self.__downloadStateFile()
             self.__downloadDiffFile()
 
-        self.__loadDiffFile()
-        self.__osmosis()
+        if args.osmfile:
+            self.__loadOsmFile()
+        else:
+            self.__loadDiffFile()
+            self.__osmosis()
+
         self.__readWayNodes()
 
     def printWayIds(self):
