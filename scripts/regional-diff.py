@@ -7,9 +7,9 @@ from lxml import etree
 osmosis_bin = "/usr/bin/osmosis"
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
-                description='Print all way and relation IDs from Vorarlberg of the latest \
-minutely replication diff file from planet.openstreetmap.org (or by a given \
-diff file)',
+                description='Print Overpass QL query for all ways and relations \
+from Vorarlberg of the latest minutely replication diff file \
+from planet.openstreetmap.org (or by a given diff file)',
                 epilog='''
 ''')
 
@@ -17,7 +17,7 @@ parser.add_argument("-v", "--verbose", action="store_true", help="increase verbo
 parser.add_argument("-f", "--file", action="store", help="use local osc.gz file \
 (instead of downloading the latest file")
 parser.add_argument("--ids-only", action="store_true", help="just print way and \
-relation IDs from given diff file (default)")
+relation IDs from given diff")
 args = parser.parse_args()
 
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
@@ -153,8 +153,45 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         self.printWayIds()
         self.printRelationIds()
 
+    def printBikeroutewaysOverpassQL(self):
+        print ('(')
+        for way in self.__ways:
+            print ('  way(' + way + ');')
+        print (');')
+        print ('rel(bw)[route="bicycle"]->.cycleroutes;')
+        print ('way(r.cycleroutes)->.cycleways;')
+        print ('(')
+        for way in self.__ways:
+            print ('  way.cycleways(' + way + ');')
+        print (')->.bikerouteways;')
+
+    def printCyclewaysOverpassQL(self):
+        print ('(')
+        for way in self.__ways:
+            print ('  way(' + way + ')[highway="cycleway"];')
+        print (')->.cycleways;')
+
+    def printBikeroutesOverpassQL(self):
+        print ('(')
+        for relation in self.__relations:
+            print ('  relation(' + relation + ')[route="bicycle"];')
+        print (')->.bikeroutes;')
+
+    def printOverpassQL(self):
+        self.printBikeroutewaysOverpassQL()
+        self.printCyclewaysOverpassQL()
+        self.printBikeroutesOverpassQL()
+        print ('(')
+        print (' .bikerouteways;')
+        print (' .cycleways;')
+        print (' .bikeroutes;')
+        print (');')
+        print ('out meta;')
+
 if __name__ == '__main__':
     posm = PlanetOsm()
-    # if args.ids_only:
-    posm.printIds()
+    if args.ids_only:
+      posm.printIds()
+    else:
+      posm.printOverpassQL()
 
