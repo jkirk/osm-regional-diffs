@@ -85,12 +85,16 @@ class OverpassQL:
     def Url(self):
         return "http://overpass-api.de/api/interpreter?data=" + self.compactQL()
 
+    def EncodedUrl(self):
+        return "http://overpass-api.de/api/interpreter?data=" + urllib.quote_plus(self.compactQL())
+
 class PlanetOsm:
     # TODO: figure out what happens when 000 changes. Currently (2014-06-09)
     # state.txt does not show 000 in it.
     __replication_url = 'http://planet.openstreetmap.org/replication/'
     __minutely_base_url = __replication_url + "minute/"
     __minutely_url = __minutely_base_url + "000/"
+    # TODO: minutelyDiffFile should be deleted after download
     __minutelyDiffFilename = ""
     __state_url = __minutely_base_url + "state.txt"
     __content_state = ""
@@ -124,6 +128,13 @@ class PlanetOsm:
 
         urllib.urlretrieve(minutelyDiffUrl, self.__minutelyDiffFilename)
 
+    def __downloadOverpass(self, ql):
+        verboseprint("Overpass-URL: " + ql.Url())
+        verboseprint("Overpass-Encoded-URL: " + ql.Url())
+        request = urllib2.Request(ql.Url().split('?')[0], ql.Url().split('?')[1])
+        response = urllib2.urlopen(request)
+        self.__content_diff = response.read()
+
     def __loadDiffFile(self):
         f = gzip.open(self.__minutelyDiffFilename, 'rb')
         self.__content_diff = f.read()
@@ -153,7 +164,11 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         p.stdin.close()
         self.__content_diff = cropped_diff[0]
 
+    # TODO: change to __readModifiedWaysAndRelations
+    # TODO: __content_diff should be __content
     def __readWayNodes(self):
+        self.__ways = []
+        self.__relations = []
         verboseprint("parsing XML...")
         root = etree.fromstring(self.__content_diff)
         if root.tag == "osmChange":
@@ -182,6 +197,26 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         else:
             print ("ERROR: not an osm oder osm-change file")
             os.system(2)
+
+    def printChangeFeed(self):
+        print ('The following ways and relations have been modified since $TIMESTAMP:')
+        verboseprint("parsing XML...")
+        root = etree.fromstring(self.__content_diff)
+        if root.tag == "osm":
+            verboseprint("Detected osm file")
+            verboseprint("way ids...")
+            for item in root:
+                if item.tag == "way":
+                    print ('WAY: ' +  item.attrib["id"])
+                    print ('  http://www.openstreetmap.org/way/' + item.attrib["id"] + '/history')
+                    print ('  http://www.openstreetmap.org/changeset/' + item.attrib["changeset"])
+                elif item.tag == "relation":
+                    print ('RELATION: ' +  item.attrib["id"])
+                    print ('  http://www.openstreetmap.org/relation/' + item.attrib["id"] + '/history')
+                    print ('  http://www.openstreetmap.org/changeset/' + item.attrib["changeset"])
+        else:
+            print ("ERROR: not an osm file")
+
 
     def __splitSequenceNumber(self, x):
         m = re.search('(...)(...)', self.sequenceNumber)
@@ -233,12 +268,19 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         ql = OverpassQL(self.__ways, self.__relations)
         print (ql.Url())
 
+    def downloadOverpass(self):
+        ql = OverpassQL(self.__ways, self.__relations)
+        self.__downloadOverpass(ql)
+        # self.__readWayNodes()
 
 if __name__ == '__main__':
     posm = PlanetOsm()
     if args.ids_only:
       posm.printIds()
     else:
-      posm.printCompactOverpassQL()
-      posm.printOverpassQLUrl()
+      # posm.printOverpassQL()
+      # posm.printCompactOverpassQL()
+      # posm.printOverpassQLUrl()
+      posm.downloadOverpass()
+      posm.printChangeFeed()
 
