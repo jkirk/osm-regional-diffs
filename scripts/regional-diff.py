@@ -16,9 +16,9 @@ from planet.openstreetmap.org (or by a given diff file)',
 parser.add_argument("-v", "--verbose", action="store_true", help="increase verbosity")
 filegroup = parser.add_mutually_exclusive_group()
 filegroup.add_argument("-f", "--file", action="store", help="use local osc.gz file \
-(instead of downloading the latest file")
+(instead of downloading the latest minutely diff file from planet.openstreetmap.org)")
 filegroup.add_argument("--osmfile", action="store", help="use local osm file \
-(from osmosis or overpass API")
+(from osmosis or overpass API)")
 parser.add_argument("--ids-only", action="store_true", help="just print way and \
 relation IDs from given diff")
 args = parser.parse_args()
@@ -67,7 +67,7 @@ class OverpassQL:
         ql_bikeroutes+= ')->.bikeroutes;\n'
         return ql_bikeroutes
 
-    def getBikewaysAndRelations(self):
+    def QL(self):
         overpass = self.getBikerouteways()
         overpass += self.getCycleways()
         overpass += self.getBikeroutes()
@@ -78,6 +78,12 @@ class OverpassQL:
         overpass += ');\n'
         overpass += 'out meta;\n'
         return overpass
+
+    def compactQL(self):
+        return re.sub(r'(;|\() *', r'\1', self.QL().replace('\n', ''))
+
+    def Url(self):
+        return "http://overpass-api.de/api/interpreter?data=" + self.compactQL()
 
 class PlanetOsm:
     # TODO: figure out what happens when 000 changes. Currently (2014-06-09)
@@ -217,15 +223,15 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
 
     def printOverpassQL(self):
         ql = OverpassQL(self.__ways, self.__relations)
-        print (ql.getBikewaysAndRelations())
+        print (ql.QL())
 
     def printCompactOverpassQL(self):
         ql = OverpassQL(self.__ways, self.__relations)
-        print (re.sub(r'(;|\() *', r'\1', ql.getBikewaysAndRelations().replace('\n', '')))
+        print (ql.compactQL())
 
     def printOverpassQLUrl(self):
         ql = OverpassQL(self.__ways, self.__relations)
-        print ("http://overpass-api.de/api/interpreter?data=" + re.sub(r'(;|\() *', r'\1', ql.getBikewaysAndRelations().replace('\n', '')))
+        print (ql.Url())
 
 
 if __name__ == '__main__':
