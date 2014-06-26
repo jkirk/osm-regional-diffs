@@ -29,6 +29,53 @@ if args.verbose:
 else:   
     verboseprint = lambda *a: None      # do-nothing function
 
+class OverpassQL:
+    __ways = []
+    __relations = []
+
+    def __init__(self, ways, relations):
+        self.__ways = ways;
+        self.__relations = relations
+
+    def getBikerouteways(self):
+        ql_bikerouteways = '(\n'
+        for way in self.__ways:
+            ql_bikerouteways += '  way(' + way + ');\n'
+        ql_bikerouteways += ');\n'
+        ql_bikerouteways += 'rel(bw)[route="bicycle"]->.cycleroutes;\n'
+        ql_bikerouteways += 'way(r.cycleroutes)->.cycleways;\n'
+        ql_bikerouteways += '(\n'
+        for way in self.__ways:
+            ql_bikerouteways += '  way.cycleways(' + way + ');\n'
+        ql_bikerouteways += ')->.bikerouteways;\n'
+        return ql_bikerouteways
+
+    def getCycleways(self):
+        ql_cycleways = '(\n'
+        for way in self.__ways:
+            ql_cycleways += '  way(' + way + ')[highway="cycleway"];\n'
+        ql_cycleways += ')->.cycleways;\n'
+        return ql_cycleways
+
+    def getBikeroutes(self):
+        ql_bikeroutes = '(\n'
+        for relation in self.__relations:
+            ql_bikeroutes += '  relation(' + relation + ')[route="bicycle"];\n'
+        ql_bikeroutes+= ')->.bikeroutes;\n'
+        return ql_bikeroutes
+
+    def getBikewaysAndRelations(self):
+        overpass = self.getBikerouteways()
+        overpass += self.getCycleways()
+        overpass += self.getBikeroutes()
+        overpass += '(\n'
+        overpass += ' .bikerouteways;\n'
+        overpass += ' .cycleways;\n'
+        overpass += ' .bikeroutes;\n'
+        overpass += ');\n'
+        overpass += 'out meta;\n'
+        return overpass
+
 class PlanetOsm:
     # TODO: figure out what happens when 000 changes. Currently (2014-06-09)
     # state.txt does not show 000 in it.
@@ -153,40 +200,9 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         self.printWayIds()
         self.printRelationIds()
 
-    def printBikeroutewaysOverpassQL(self):
-        print ('(')
-        for way in self.__ways:
-            print ('  way(' + way + ');')
-        print (');')
-        print ('rel(bw)[route="bicycle"]->.cycleroutes;')
-        print ('way(r.cycleroutes)->.cycleways;')
-        print ('(')
-        for way in self.__ways:
-            print ('  way.cycleways(' + way + ');')
-        print (')->.bikerouteways;')
-
-    def printCyclewaysOverpassQL(self):
-        print ('(')
-        for way in self.__ways:
-            print ('  way(' + way + ')[highway="cycleway"];')
-        print (')->.cycleways;')
-
-    def printBikeroutesOverpassQL(self):
-        print ('(')
-        for relation in self.__relations:
-            print ('  relation(' + relation + ')[route="bicycle"];')
-        print (')->.bikeroutes;')
-
     def printOverpassQL(self):
-        self.printBikeroutewaysOverpassQL()
-        self.printCyclewaysOverpassQL()
-        self.printBikeroutesOverpassQL()
-        print ('(')
-        print (' .bikerouteways;')
-        print (' .cycleways;')
-        print (' .bikeroutes;')
-        print (');')
-        print ('out meta;')
+        ql = OverpassQL(self.__ways, self.__relations)
+        print (ql.getBikewaysAndRelations())
 
 if __name__ == '__main__':
     posm = PlanetOsm()
