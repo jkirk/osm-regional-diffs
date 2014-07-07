@@ -21,6 +21,7 @@ filegroup.add_argument("--osmfile", action="store", help="use local osm file \
 (from osmosis or overpass API)")
 parser.add_argument("--ids-only", action="store_true", help="just print way and \
 relation IDs from given diff (instead of generating a report)")
+parser.add_argument("--ql-only", action="store_true", help="just print Overpass QL")
 args = parser.parse_args()
 
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
@@ -67,14 +68,23 @@ class OverpassQL:
         ql_bikeroutes+= ')->.bikeroutes;\n'
         return ql_bikeroutes
 
+    def getBicycleallowed(self):
+        ql_bicycleallowed = '(\n'
+        for way in self.__ways:
+            ql_bicycleallowed += '  way(' + way + ')[highway~"footway|track|service|path"][bicycle!="private"][bicycle!="no"][bicycle];\n'
+        ql_bicycleallowed += ')->.bicycleallowed;\n'
+        return ql_bicycleallowed
+
     def QL(self):
         overpass = self.getBikerouteways()
         overpass += self.getCycleways()
         overpass += self.getBikeroutes()
+        overpass += self.getBicycleallowed()
         overpass += '(\n'
         overpass += ' .bikerouteways;\n'
         overpass += ' .cycleways;\n'
         overpass += ' .bikeroutes;\n'
+        overpass += ' .bicycleallowed;\n'
         overpass += ');\n'
         overpass += 'out meta;\n'
         return overpass
@@ -280,8 +290,9 @@ if __name__ == '__main__':
     posm = PlanetOsm()
     if args.ids_only:
       posm.printIds()
+    elif args.ql_only:
+      posm.printOverpassQL()
     else:
-      # posm.printOverpassQL()
       # posm.printCompactOverpassQL()
       # posm.printOverpassQLUrl()
       posm.downloadOverpass()
