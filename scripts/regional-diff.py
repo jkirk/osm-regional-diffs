@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 import argparse, urllib, urllib2, re, gzip, subprocess, os, sys, shlex
+import datetime
+import PyRSS2Gen
 from lxml import etree
 
 osmosis_bin = "/usr/bin/osmosis"
@@ -19,9 +21,11 @@ filegroup.add_argument("-f", "--file", action="store", help="use local osc.gz di
 (instead of downloading the latest minutely diff file from planet.openstreetmap.org)")
 filegroup.add_argument("--osmfile", action="store", help="use local osm file \
 (from osmosis or overpass API)")
-parser.add_argument("--ids-only", action="store_true", help="just print way and \
+output = parser.add_mutually_exclusive_group()
+output.add_argument("--rss-file", action="store", help="generate rss file")
+output.add_argument("--ids-only", action="store_true", help="just print way and \
 relation IDs from given diff (instead of generating a report)")
-parser.add_argument("--ql-only", action="store_true", help="just print Overpass QL")
+output.add_argument("--ql-only", action="store_true", help="just print Overpass QL")
 args = parser.parse_args()
 
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
@@ -217,7 +221,7 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         root = etree.fromstring(self.__content_diff)
         if root.tag == "osm":
             verboseprint("Detected osm file")
-            verboseprint("way ids...")
+            verboseprint("way and relation ids...")
             for item in root:
                 if item.tag == "way":
                     print ('WAY: ' +  item.attrib["id"])
@@ -230,6 +234,36 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         else:
             print ("ERROR: not an osm file")
 
+    def generateRssFeed(self):
+        rssitems = []
+        verboseprint("parsing XML...")
+        root = etree.fromstring(self.__content_diff)
+        if root.tag == "osm":
+            verboseprint("Detected osm file")
+            verboseprint("way and relation ids...")
+            for item in root:
+                if item.tag == "way":
+                    title = "Modified way: " + item.attrib["id"]
+                    link = 'http://www.openstreetmap.org/way/' + item.attrib["id"] + '/history'
+                    rssitems.append(PyRSS2Gen.RSSItem(title = title, link = link))
+                elif item.tag == "relation":
+                    title = "Modified relation: " + item.attrib["id"]
+                    link = 'http://www.openstreetmap.org/relation/' + item.attrib["id"] + '/history'
+                    rssitems.append(PyRSS2Gen.RSSItem(title = title, link = link))
+        else:
+            print ("ERROR: not an osm file")
+
+        rss = PyRSS2Gen.RSS2(
+        title = "Regional Diff feed",
+        link = "https://github.com/jkirk/osm-regional-diffs",
+        description='Print report of all modified ways and relations \
+from Vorarlberg of the latest minutely replication diff file \
+from planet.openstreetmap.org (or by a given diff file)',
+        lastBuildDate = datetime.datetime.utcnow(),
+        items = rssitems
+        )
+
+        rss.write_xml(open(args.rss_file, "w"))
 
     def __splitSequenceNumber(self, x):
         m = re.search('(...)(...)', self.sequenceNumber)
@@ -289,12 +323,15 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
 if __name__ == '__main__':
     posm = PlanetOsm()
     if args.ids_only:
-      posm.printIds()
+        posm.printIds()
     elif args.ql_only:
-      posm.printOverpassQL()
+        posm.printOverpassQL()
     else:
-      # posm.printCompactOverpassQL()
-      # posm.printOverpassQLUrl()
-      posm.downloadOverpass()
-      posm.printChangeFeed()
+        # posm.printCompactOverpassQL()
+        # posm.printOverpassQLUrl()
+        posm.downloadOverpass()
+        if args.rss_file:
+            posm.generateRssFeed()
+        else:
+            posm.printChangeFeed()
 
