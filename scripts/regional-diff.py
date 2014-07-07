@@ -10,22 +10,28 @@ osmosis_bin = "/usr/bin/osmosis"
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
                 description='Print report of all modified ways and relations \
-from Vorarlberg of the latest minutely replication diff file \
+from Vorarlberg of the latest minutely or hourly replication diff file \
 from planet.openstreetmap.org (or by a given diff file)',
                 epilog='''
 ''')
 
 parser.add_argument("-v", "--verbose", action="store_true", help="increase verbosity")
 filegroup = parser.add_mutually_exclusive_group()
+filegroup.add_argument("-M", "--minutely", action="store_true", default=True,
+help="use minutely diff file from planet.openstreetmap.org (default)")
+filegroup.add_argument("-H", "--hourly", action="store_true",
+help="use hourly diff file from planet.openstreetmap.org")
 filegroup.add_argument("-f", "--file", action="store", help="use local osc.gz diff file \
-(instead of downloading the latest minutely diff file from planet.openstreetmap.org)")
+(instead of downloading the latest diff file from planet.openstreetmap.org)")
 filegroup.add_argument("--osmfile", action="store", help="use local osm file \
 (from osmosis or overpass API)")
 output = parser.add_mutually_exclusive_group()
-output.add_argument("--rss-file", action="store", help="generate rss file")
-output.add_argument("--ids-only", action="store_true", help="just print way and \
-relation IDs from given diff (instead of generating a report)")
-output.add_argument("--ql-only", action="store_true", help="just print Overpass QL")
+output.add_argument("--report", action="store_true", default=True, help="output \
+report to stdout (default)")
+output.add_argument("--ids-only", action="store_true", help="output all way and \
+relation IDs from given diff")
+output.add_argument("--ql-only", action="store_true", help="output Overpass QL")
+output.add_argument("--rss-file", action="store", help="output report as rss file")
 args = parser.parse_args()
 
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
@@ -103,14 +109,14 @@ class OverpassQL:
         return "http://overpass-api.de/api/interpreter?data=" + urllib.quote_plus(self.compactQL())
 
 class PlanetOsm:
-    # TODO: figure out what happens when 000 changes. Currently (2014-06-09)
-    # state.txt does not show 000 in it.
     __replication_url = 'http://planet.openstreetmap.org/replication/'
-    __minutely_base_url = __replication_url + "minute/"
-    __minutely_url = __minutely_base_url + "000/"
+    if args.hourly:
+        __diff_base_url = __replication_url + "hour/"
+    else:
+        __diff_base_url = __replication_url + "minute/"
     # TODO: minutelyDiffFile should be deleted after download
-    __minutelyDiffFilename = ""
-    __state_url = __minutely_base_url + "state.txt"
+    __diffFilename = ""
+    __state_url = __diff_base_url + "state.txt"
     __content_state = ""
     __content_diff = ""
 
@@ -123,6 +129,7 @@ class PlanetOsm:
 
     def __downloadStateFile(self):
         verboseprint("Downloading state.txt...")
+        verboseprint("URL: " + self.__state_url)
         response = urllib2.urlopen(self.__state_url)
         self.__content_state = response.read()
         verboseprint("Timestamp of state.txt:", self.__content_state.splitlines()[0])
@@ -134,13 +141,13 @@ class PlanetOsm:
         return re.split('=', sequenceNumberLine)[1]
 
     def __downloadDiffFile(self):
-        self.__minutelyDiffFilename = self.__splitSequenceNumber(2) + ".osc.gz"
-        minutelyDiffUrl = self.__minutely_url + self.__splitSequenceNumber(1) + "/" + self.__minutelyDiffFilename
+        self.__diffFilename = self.__splitSequenceNumber(3) + ".osc.gz"
+        diffUrl = self.__diff_base_url + self.__splitSequenceNumber(1) + "/" + self.__splitSequenceNumber(2) + "/" + self.__diffFilename
 
-        verboseprint("URL of latest minutely diff:", minutelyDiffUrl)
-        verboseprint("Downloading " + self.__minutelyDiffFilename + "...")
+        verboseprint("URL of latest minutely diff:", diffUrl)
+        verboseprint("Downloading " + self.__diffFilename + "...")
 
-        urllib.urlretrieve(minutelyDiffUrl, self.__minutelyDiffFilename)
+        urllib.urlretrieve(diffUrl, self.__diffFilename)
 
     def __downloadOverpass(self, ql):
         verboseprint("Overpass-URL: " + ql.Url())
@@ -150,10 +157,10 @@ class PlanetOsm:
         self.__content_diff = response.read()
 
     def __loadDiffFile(self):
-        f = gzip.open(self.__minutelyDiffFilename, 'rb')
+        f = gzip.open(self.__diffFilename, 'rb')
         self.__content_diff = f.read()
         f.close()
-        # verboseprint("Content of " + self.__minutelyDiffFilename + ":")
+        # verboseprint("Content of " + self.__diffFilename + ":")
         # verboseprint(self.__content_diff)
 
     def __loadOsmFile(self):
@@ -214,9 +221,9 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
 
     def printChangeFeed(self):
         if args.file:
-            print ('The following ways and relations have been modified in ' + args.file)
+            print ('The following ways and relations (in Vorarlberg) have been modified in ' + args.file)
         else:
-            print ('The following ways and relations have been modified since ' + self.__content_state.splitlines()[0] + ':')
+            print ('The following ways and relations (in Vorarlberg) have been modified since ' + self.__content_state.splitlines()[0] + ':')
         verboseprint("parsing XML...")
         root = etree.fromstring(self.__content_diff)
         if root.tag == "osm":
@@ -256,7 +263,7 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
         rss = PyRSS2Gen.RSS2(
         title = "Regional Diff feed",
         link = "https://github.com/jkirk/osm-regional-diffs",
-        description='Print report of all modified ways and relations \
+        description='All modified ways and relations \
 from Vorarlberg of the latest minutely replication diff file \
 from planet.openstreetmap.org (or by a given diff file)',
         lastBuildDate = datetime.datetime.utcnow(),
@@ -266,16 +273,16 @@ from planet.openstreetmap.org (or by a given diff file)',
         rss.write_xml(open(args.rss_file, "w"))
 
     def __splitSequenceNumber(self, x):
-        m = re.search('(...)(...)', self.sequenceNumber)
+        m = re.search('(...)(...)(...)', self.sequenceNumber.zfill(9))
         if not m:
-            raise Exception("Current Sequence Number can not be extracted! Please check state.txt file manually.")
+            raise Exception("Current Sequence Number could not be extracted! Please check state.txt file manually.")
         return m.group(x)
 
     # download state.txt and diff file and update all variables
     def update(self):
         if args.file:
             verboseprint("skipping download. Using local diff file (.osc.gz): " + args.file)
-            self.__minutelyDiffFilename = args.file
+            self.__diffFilename = args.file
         elif args.osmfile:
             verboseprint("skipping download. Using local osm file (.osm): " + args.osmfile)
             self.__minutelyOsmFilename = args.osmfile
