@@ -7,7 +7,7 @@ from lxml import etree
 osmosis_bin = "/usr/bin/osmosis"
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
-                description='Print Overpass QL query for all ways and relations \
+                description='Print report of all modified ways and relations \
 from Vorarlberg of the latest minutely replication diff file \
 from planet.openstreetmap.org (or by a given diff file)',
                 epilog='''
@@ -15,12 +15,12 @@ from planet.openstreetmap.org (or by a given diff file)',
 
 parser.add_argument("-v", "--verbose", action="store_true", help="increase verbosity")
 filegroup = parser.add_mutually_exclusive_group()
-filegroup.add_argument("-f", "--file", action="store", help="use local osc.gz file \
+filegroup.add_argument("-f", "--file", action="store", help="use local osc.gz diff file \
 (instead of downloading the latest minutely diff file from planet.openstreetmap.org)")
 filegroup.add_argument("--osmfile", action="store", help="use local osm file \
 (from osmosis or overpass API)")
 parser.add_argument("--ids-only", action="store_true", help="just print way and \
-relation IDs from given diff")
+relation IDs from given diff (instead of generating a report)")
 args = parser.parse_args()
 
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
