@@ -199,7 +199,10 @@ inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
             os.system(2)
 
     def printChangeFeed(self):
-        print ('The following ways and relations have been modified since $TIMESTAMP:')
+        if args.file:
+            print ('The following ways and relations have been modified in ' + args.file)
+        else:
+            print ('The following ways and relations have been modified since ' + self.__content_state.splitlines()[0] + ':')
         verboseprint("parsing XML...")
         root = etree.fromstring(self.__content_diff)
         if root.tag == "osm":
