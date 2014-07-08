@@ -188,20 +188,32 @@ class PlanetOsm:
         #changed_stream = simplified_diff[0]
 
 
-#        args_convert2osm = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
-    #--read-empty outPipe.0="empty" \
-    #--apply-change inPipe.0="empty" inPipe.1="change" \
-    #--write-xml -')
+        args_convert2osm = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
+--read-empty outPipe.0="empty" \
+--apply-change inPipe.0="empty" inPipe.1="change" \
+--write-xml -')
 
-        #        args_filter = shlex.split(osmosis_bin + '--read-xml - outPipe.0="osm" \
-            #--tf accept-ways highway=* \
-            #--tf reject-ways highway=motorway,motorway_link,trunk,trunk_link,bus_guideway,raceway \
-            #--tf accept-relations route=bicycle \
-            #--write-xml -')
+        pc = subprocess.Popen(args_convert2osm, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
+        converted_diff = pc.communicate(changed_stream)
+        pc.stdin.close()
 
-        #        args_cut = shlex.split(osmosis_bin + ' --read-xml - outPipe.0="osm" \
-            #--bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
-            #--write-xml -')
+        args_filter = shlex.split(osmosis_bin + ' --read-xml - \
+--tag-filter accept-ways highway=* \
+--tag-filter reject-ways highway=motorway,motorway_link,trunk,trunk_link,bus_guideway,raceway \
+--tag-filter accept-relations route=bicycle \
+--write-xml -')
+        
+        pf = subprocess.Popen(args_filter, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
+        filtered_diff = pf.communicate(converted_diff[0])
+        pf.stdin.close()
+
+        #todo: 
+        # • simplify-change -OK
+        # • per regex <deleted> → <modified> im osc -OK
+        # • convert2xml -OK
+        # • filter tags
+        # • add missing nodes via overpass
+        # • cut -OK
 
 # original query
 #        args = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
@@ -212,25 +224,14 @@ class PlanetOsm:
     #--write-xml -')
 
 # query to read in changed_stream
-        args = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
---read-empty outPipe.0="empty" \
---apply-change inPipe.0="empty" inPipe.1="change" outPipe.0="osm" \
+        args = shlex.split(osmosis_bin + ' --read-xml - outPipe.0="osm" \
 --bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
 --write-xml -')
 
-        #todo: 
-        # • simplify-change
-        # • per regex <deleted> → <modified> im osc
-        # • convert2xml
-        # • filter tags
-        # • add missing nodes via overpass
-        # • cut
-
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        devnull.close()
-        #cropped_diff = p.communicate(self.__content_diff)
-        cropped_diff = p.communicate(changed_stream)
+        cropped_diff = p.communicate(filtered_diff[0])
         p.stdin.close()
+        devnull.close()
         self.__content_diff = cropped_diff[0]
 
     # TODO: change to __readModifiedWaysAndRelations
