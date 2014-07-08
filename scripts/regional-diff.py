@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 from __future__ import print_function
 import argparse, urllib, urllib2, re, gzip, subprocess, os, sys, shlex
@@ -173,15 +174,62 @@ class PlanetOsm:
             return
 
         devnull = open('/dev/null', 'w')
+
+        args_simplify = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
+--simplify-change inPipe.0="change"  \
+--write-xml-change -')
+
+        ps = subprocess.Popen(args_simplify, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
+        simplified_diff = ps.communicate(self.__content_diff)
+        ps.stdin.close()
+
+        # change osm-item status from deleted to modified, because osmosis ignores deleted nodes when creating osm-file
+        #changed_stream = re.sub('delete>','modify>',simplified_diff[0])
+        changed_stream = simplified_diff[0]
+
+
+#        args_convert2osm = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
+    #--read-empty outPipe.0="empty" \
+    #--apply-change inPipe.0="empty" inPipe.1="change" \
+    #--write-xml -')
+
+        #        args_filter = shlex.split(osmosis_bin + '--read-xml - outPipe.0="osm" \
+            #--tf accept-ways highway=* \
+            #--tf reject-ways highway=motorway,motorway_link,trunk,trunk_link,bus_guideway,raceway \
+            #--tf accept-relations route=bicycle \
+            #--write-xml -')
+
+        #        args_cut = shlex.split(osmosis_bin + ' --read-xml - outPipe.0="osm" \
+            #--bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
+            #--write-xml -')
+
+# original query
+#        args = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
+    #--simplify-change inPipe.0="change" outPipe.0="cleaned" \
+    #--read-empty outPipe.0="empty" \
+    #--apply-change inPipe.0="empty" inPipe.1="cleaned" outPipe.0="osm" \
+    #--bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
+    #--write-xml -')
+
+# query to read in changed_stream
         args = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
---simplify-change inPipe.0="change" outPipe.0="cleaned" \
---read-empty outPipe.0="empty" --apply-change inPipe.0="empty" \
-inPipe.1="cleaned" outPipe.0="osm" --bounding-polygon \
-inPipe.0="osm" file="vorarlberg.poly" --write-xml -')
+--read-empty outPipe.0="empty" \
+--apply-change inPipe.0="empty" inPipe.1="change" outPipe.0="osm" \
+--bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
+--write-xml -')
+
+        #todo: 
+        # • simplify-change
+        # • per regex <deleted> → <modified> im osc
+        # • convert2xml
+        # • filter tags
+        # • add missing nodes via overpass
+        # • cut
 
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
         devnull.close()
-        cropped_diff = p.communicate(self.__content_diff)
+        #cropped_diff = p.communicate(self.__content_diff)
+        cropped_diff = p.communicate(changed_stream)
         p.stdin.close()
         self.__content_diff = cropped_diff[0]
 

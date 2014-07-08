@@ -179,4 +179,74 @@ Show only ways (from a given list of ways) which are part of a bicycle route
   way for our task is to select only the parent ways for all nodes from the input
   set with *way(bn*);
 
+Problem:
+ways ohne node-änderungen (nur tags) schmeisst der osmosis-crop-befehl raus.
 
+wenn wir wget http://www.openstreetmap.org/api/0.6/changeset/24005065
+dann kriegen wir das XML mit den changeset-tags, wo min_max lon/lat drinstehen
+
+so problem: ways ohne nodes, vorgehensweise:
+ * osmosis-toolchain bis auf schritt b-poly durchführen
+ * filtern nach unseren benötigten tag-kombinationen
+  hw=cw || hw=tr|path|fw|serv && (( bicy=¬false || access=¬false)
+    false ≙ private|no
+    true ≙ yes|designated|permissive|official|public
+
+--read-xml input.osm \
+  --tf accept-ways highway=* \
+  --tf reject-ways highway=motorway,motorway_link,trunk,trunk_link,bus_guideway,raceway \
+  --used-node \
+  --write-xml output.osm
+
+ * von überbleibenden ways jeweils den ersten node runterladen und ins .osm.xml einfügen
+ * dann mit osmosis beschneiden
+
+Problem mit Relations:
+  was ist, wenn jemand einen way aus der Bundesstraße löscht?
+    → dann wird die Relation modified, und wir kriegens mit.
+
+Seine vorgangsweise:
+  croppen
+  alle ways schaun ob in [route="bicycle"] ->.bikerouteways → needs alle hw's !motorway-etc
+  alle ways schaun ob hw=cw -> .cycleways;
+  alle rels schaun ob [route="bicycle"] -> .bikerouts → TODO kann mit osmosis gemacht werden → DONE werden nur diese rels durchgelassen
+  alle ways schaun ob hw=rest+bic=ja → .bicycleallowed → FIXME könnte mit osmosis gemacht werden
+  get ALLE results von overpass API als osm.xml zurück
+  parse und printe.
+
+besser: 
+  nur schaun ob in [route="bicycle"] via overpass.
+  Rest müsste via osmosis gehen!
+    direkt aus osmosis folgendes nehmen:
+    • alle rels [route="bicycle"]
+    • alle hw=cw; hw=rest+bic=ja
+  → doppelte rausfiltern wie?
+      overpass kann das... ( () (union) )
+        das ist genau das was er macht...
+          am einfachsten nur den Input verkleinern
+            wir müssen sowieso alle ways an overpass schicken, da machen die 10% doppelten und 1% rels extra auch nix aus
+→ Todo:
+  filtern mit osmosis, ev. mehrere steps
+    1. nur die typen die interessieren
+  dann fehlende way-koordinaten nodes hinzufügen (get a list of nodes via overpass)
+  croppen
+    (ev: 2. satz filtern nach nur cw=erlaubt ways mittels osmosis, damit die overpass-server weniger zu tun haben)
+  große (oder ev. etwas verkleinerte) overpass-query absetzen
+
+vars:    self.__content_diff ist die antwort der overpass API, aus der das Ergebnis generiert wird
+
+TO TEST overpass QL if leer.
+
+TO TEST if rel modified with no members supplied (no spatial information)
+  testcase: sortiere nur Murradweg um
+
+TO TEST __readWayNodes liest ja jetzt nur mehr das von osmosis von osc in XML umgewandelte File - sind im XML die deleted items noch drin?
+  NEIN - FUCK.
+    beeinflusst:
+      • nodes, die in ways waren die in [route="bicycle"] ->.bikerouteways drin waren - NEIN, da way dann auch modified wurde
+      • gelöschte Ways - NEIN, da Rel dann auch modifiziert würde (kA ob server objekte löschen lässt, wenn in rel vorhanden. sollte aber normalerweise kein Editor zulassen)
+        · wär aber klass, in einer übersicht den status anzuzeigen
+      • alleinstehende cws, die nicht in einer Relation sind.
+      • deletete Relations (!)
+  abhilfe:
+    per regex <deleted> → <modified> im osc NACH --simplify-change - Schritt.
