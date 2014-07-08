@@ -184,8 +184,8 @@ class PlanetOsm:
         ps.stdin.close()
 
         # change osm-item status from deleted to modified, because osmosis ignores deleted nodes when creating osm-file
-        #changed_stream = re.sub('delete>','modify>',simplified_diff[0])
-        changed_stream = simplified_diff[0]
+        changed_stream = re.sub('delete>','modify>',simplified_diff[0])
+        #changed_stream = simplified_diff[0]
 
 
 #        args_convert2osm = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
