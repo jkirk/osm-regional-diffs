@@ -249,4 +249,4 @@ TO TEST __readWayNodes liest ja jetzt nur mehr das von osmosis von osc in XML um
       • alleinstehende cws, die nicht in einer Relation sind.
       • deletete Relations (!)
   abhilfe:
-    per regex <deleted> → <modified> im osc NACH --simplify-change - Schritt.
+    per regex <deleted> → <modified> im osc NACH --simplify-change - Schritt. -OK
