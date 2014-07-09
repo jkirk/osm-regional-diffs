@@ -258,20 +258,59 @@ class PlanetOsm:
                 verboseprint("no spatial information found, adding node " + node_id + " to list of nodes to download")
             verboseprint("number of nodes to download: " + str(len(nodes_to_download)))
 
-        # download list nodes_to_download via overpass:
-        ql = '(\n'
-        for node in nodes_to_download:
-            ql += '  node(' + node + ');\n'
-        ql += ');\n'
-        ql += 'out meta;\n'
+        overpass_output = ""
+        if len(nodes_to_download) > 0:
+            # download list nodes_to_download via overpass:
+            ql = '(\n'
+            for node in nodes_to_download:
+                ql += '  node(' + node + ');\n'
+            ql += ');\n'
+            ql += 'out meta;\n' #try mode skeleton (no tags, only ids+coordinates)
 
-        compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
-        ql_url = "http://overpass-api.de/api/interpreter?data=" + compact_ql
-        request = urllib2.Request(ql_url.split('?')[0], ql_url.split('?')[1])
-        response = urllib2.urlopen(request)
-        overpass_output = response.read()
+            compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
+            ql_url = "http://overpass-api.de/api/interpreter?data=" + compact_ql
+            request = urllib2.Request(ql_url.split('?')[0], ql_url.split('?')[1])
+            response = urllib2.urlopen(request)
+            overpass_output = response.read()
 
-    
+            root = etree.fromstring(overpass_output)
+            node_counter = 0
+            if root.tag == "osm":
+                verboseprint("Detected osm file, overpass answer OK")
+                for item in root:
+                    if item.tag == "node":
+                        node_counter += 1
+                verboseprint("got " + str(node_counter) + " nodes from overpass") #note: overpass API does NOT return deleted nodes!
+            else:
+                print ("ERROR, Overpass did not return osm file on missing node download")
+
+            # merge overpass node answer with existing
+            # osmosis does not work, because 2nd input must be a file, and we do not want intermediary files
+            # → so concatenate strings: cut off tail of node file and header of diff file.
+            overpass_output_tailcut = overpass_output[:-7] # remove last chars (</osm>)
+            # find one of the three tags node,way,rel, split on first (assumes that all is in node-way-rel-order
+            diff_with_missing_nodes = filtered_diff[0]
+            if "<node" in diff_with_missing_nodes:
+                split_diff = diff_with_missing_nodes.split("<node",1)
+                headcut_diff = "<node" + split_diff[1]
+            elif "<way" in diff_with_missing_nodes:   # very unprobable case for no nodes in changeset
+                split_diff = diff_with_missing_nodes.split("<way",1)
+                headcut_diff = "<way" + split_diff[1]
+            elif "<relation" in diff_with_missing_nodes: # very very nprobable case for no ways in changeset
+                split_diff = diff_with_missing_nodes.split("<relation",1)
+                headcut_diff = "<relation" + split_diff[1]
+            else:
+                print ("Error in changeset split: empty changeset found")
+                headcut_diff = "</osm>"
+
+            diff_for_boundary_cut = overpass_output_tailcut + headcut_diff
+        else:
+            diff_for_boundary_cut = filtered_diff[0]
+
+#        with open("overpass_output.osm", "w") as text_file:
+#            text_file.write(overpass_output)
+#        with open("diff_gesamt.osm", "w") as text_file1:
+#            text_file1.write(diff_for_boundary_cut)
 
     #todo: 
     # • simplify-change -OK
@@ -298,11 +337,14 @@ class PlanetOsm:
 
         verboseprint("osmosis pipe cut      start TIME: " + str(datetime.datetime.now()))
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        cropped_diff = p.communicate(filtered_diff[0])
+        cropped_diff = p.communicate(diff_for_boundary_cut)
         p.stdin.close()
         verboseprint("osmosis pipe cut      end   TIME: " + str(datetime.datetime.now()))
         devnull.close()
         self.__content_diff = cropped_diff[0]
+
+        with open("diff_cut.osm", "w") as text_file1:
+            text_file1.write(self.__content_diff)
 
     # TODO: change to __readModifiedWaysAndRelations
     # TODO: __content_diff should be __content
