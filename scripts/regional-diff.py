@@ -168,6 +168,16 @@ class PlanetOsm:
         f = open(self.__minutelyOsmFilename, 'rb')
         self.__content_diff = f.read()
         f.close()
+    def __osmosis_call(self,args, input_data):
+        devnull = open('/dev/null', 'w')
+        verboseprint(u"osmosis call „" + args + u"“ started, TIME: " + str(datetime.datetime.now()))
+        exe_and_args = shlex.split(osmosis_bin + args)
+        p = subprocess.Popen(exe_and_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
+        output_data = p.communicate(input_data)
+        p.stdin.close()
+        verboseprint("osmosis pipe end   TIME: " + str(datetime.datetime.now()))
+        devnull.close()
+        return output_data[0]
 
     def __osmosis(self):
         if not os.path.isfile(osmosis_bin):
@@ -178,17 +188,20 @@ class PlanetOsm:
         args_simplify = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
 --simplify-change inPipe.0="change"  \
 --write-xml-change -')
+        args_simplify = ' --read-xml-change - outPipe.0="change" \
+--simplify-change inPipe.0="change"  \
+--write-xml-change -'
+        simplified_diff = self.__osmosis_call(args_simplify, self.__content_diff)
+        
 
-        verboseprint("osmosis pipe simplify start TIME: " + str(datetime.datetime.now()))
-        ps = subprocess.Popen(args_simplify, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        simplified_diff = ps.communicate(self.__content_diff)
-        ps.stdin.close()
-        verboseprint("osmosis pipe simplify end   TIME: " + str(datetime.datetime.now()))
+        #        verboseprint("osmosis pipe simplify start TIME: " + str(datetime.datetime.now()))
+        #ps = subprocess.Popen(args_simplify, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
+        #simplified_diff = ps.communicate(self.__content_diff)
+        #ps.stdin.close()
+        #verboseprint("osmosis pipe simplify end   TIME: " + str(datetime.datetime.now()))
 
-        # change osm-item status from deleted to modified, because osmosis ignores deleted nodes when creating osm-file
-        changed_stream = re.sub('delete>','modify>',simplified_diff[0])
-        #changed_stream = simplified_diff[0]
-
+        # change osm-item status from deleted to modified, because osmosis ignores deleted items when creating osm-file
+        changed_stream = re.sub('delete>','modify>',simplified_diff)
 
         args_convert2osm = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
 --read-empty outPipe.0="empty" \
@@ -215,7 +228,7 @@ class PlanetOsm:
 
         verboseprint("add missing nodes to ways without spatial information: parsing XML...")
         root = etree.fromstring(filtered_diff[0])
-        node_table = {} # python dictionary = hash table. key: node-id; values: 'existing'→1,'to download'→2
+        node_table = {} # python dictionary = hash table for speed. key: node-id; values: 'existing'→1,'to download'→2
         nodes_to_download = [] # extra list for performance reasons
 
         if root.tag == "osm":
@@ -319,16 +332,9 @@ class PlanetOsm:
         # • filter tags -OK
         # • for each way without spatial information, find a node -OK
         # • download missing nodes via overpass -OK
-        # • merge from overpass downloaded file via osmosis
+        # • merge from overpass downloaded file via osmosis → NOK, via concatenate
         # • cut -OK
 
-# original query
-#        args = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
-    #--simplify-change inPipe.0="change" outPipe.0="cleaned" \
-    #--read-empty outPipe.0="empty" \
-    #--apply-change inPipe.0="empty" inPipe.1="cleaned" outPipe.0="osm" \
-    #--bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
-    #--write-xml -')
 
 # query to read in changed_stream
         args = shlex.split(osmosis_bin + ' --read-xml - outPipe.0="osm" \
