@@ -185,34 +185,26 @@ class PlanetOsm:
 
         devnull = open('/dev/null', 'w')
 
-        args_simplify = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
---simplify-change inPipe.0="change"  \
---write-xml-change -')
         args_simplify = ' --read-xml-change - outPipe.0="change" \
 --simplify-change inPipe.0="change"  \
 --write-xml-change -'
         simplified_diff = self.__osmosis_call(args_simplify, self.__content_diff)
         
-
-        #        verboseprint("osmosis pipe simplify start TIME: " + str(datetime.datetime.now()))
-        #ps = subprocess.Popen(args_simplify, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        #simplified_diff = ps.communicate(self.__content_diff)
-        #ps.stdin.close()
-        #verboseprint("osmosis pipe simplify end   TIME: " + str(datetime.datetime.now()))
-
         # change osm-item status from deleted to modified, because osmosis ignores deleted items when creating osm-file
         changed_stream = re.sub('delete>','modify>',simplified_diff)
 
-        args_convert2osm = shlex.split(osmosis_bin + ' --read-xml-change - outPipe.0="change" \
+        args_convert2osm = ' --read-xml-change - outPipe.0="change" \
 --read-empty outPipe.0="empty" \
 --apply-change inPipe.0="empty" inPipe.1="change" \
---write-xml -')
+--write-xml -'
 
-        verboseprint("osmosis pipe convert  start TIME: " + str(datetime.datetime.now()))
-        pc = subprocess.Popen(args_convert2osm, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        converted_diff = pc.communicate(changed_stream)
-        pc.stdin.close()
-        verboseprint("osmosis pipe convert  end   TIME: " + str(datetime.datetime.now()))
+        #        verboseprint("osmosis pipe convert  start TIME: " + str(datetime.datetime.now()))
+        #pc = subprocess.Popen(args_convert2osm, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
+        #converted_diff = pc.communicate(changed_stream)
+        #pc.stdin.close()
+        #verboseprint("osmosis pipe convert  end   TIME: " + str(datetime.datetime.now()))
+
+        converted_diff = self.__osmosis_call(args_convert2osm, changed_stream)
 
         args_filter = shlex.split(osmosis_bin + ' --read-xml - \
 --tag-filter accept-ways highway=* \
@@ -222,7 +214,7 @@ class PlanetOsm:
         
         verboseprint("osmosis pipe filter   start TIME: " + str(datetime.datetime.now()))
         pf = subprocess.Popen(args_filter, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        filtered_diff = pf.communicate(converted_diff[0])
+        filtered_diff = pf.communicate(converted_diff)
         pf.stdin.close()
         verboseprint("osmosis pipe filter   end   TIME: " + str(datetime.datetime.now()))
 
