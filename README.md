@@ -13,11 +13,11 @@ depends on the following:
 Gettings started
 ----------------
 
-* First clone the repository:
+First clone the repository:
 
 	$ git clone https://github.com/jkirk/osm-regional-diffs.git
 
-* View the help message output:
+View the help message output:
 
 	$ scripts/regional-diff.py --help                                                                                    :(
 	usage: regional-diff.py [-h] [-v] [-M | -H | -f FILE | --osmfile OSMFILE]
