@@ -455,8 +455,11 @@ from planet.openstreetmap.org (or by a given diff file)',
         print (ql.Url())
 
     def downloadOverpass(self):
-        ql = OverpassQL(self.__ways, self.__relations)
-        self.__downloadOverpass(ql)
+        if not self.__ways and not self.__relations:
+            self.__content_diff = "<osm></osm>"
+        else:
+            ql = OverpassQL(self.__ways, self.__relations)
+            self.__downloadOverpass(ql)
         # self.__readWayNodes()
 
 if __name__ == '__main__':
