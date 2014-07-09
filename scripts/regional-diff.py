@@ -183,8 +183,6 @@ class PlanetOsm:
         if not os.path.isfile(osmosis_bin):
             return
 
-        devnull = open('/dev/null', 'w')
-
         args_simplify = ' --read-xml-change - outPipe.0="change" \
 --simplify-change inPipe.0="change"  \
 --write-xml-change -'
@@ -247,7 +245,6 @@ class PlanetOsm:
                 verboseprint("no spatial information found, adding node " + node_id + " to list of nodes to download")
             verboseprint("number of nodes to download: " + str(len(nodes_to_download)))
 
-        overpass_output = ""
         if len(nodes_to_download) > 0:
             # download list nodes_to_download via overpass:
             ql = '(\n'
@@ -276,8 +273,8 @@ class PlanetOsm:
             # merge overpass node answer with existing
             # osmosis does not work, because 2nd input must be a file, and we do not want intermediary files
             # → so concatenate strings: cut off tail of node file and header of diff file.
-            overpass_output_tailcut = overpass_output[:-7] # remove last chars (</osm>)
-            # find one of the three tags node,way,rel, split on first (assumes that all is in node-way-rel-order
+            overpass_output_tailcut = overpass_output[:-7] # remove last chars ( "</osm>" )
+            # find one of the three tags node,way,rel, split on first (assumes that all is in node-way-rel-order)
             diff_with_missing_nodes = filtered_diff
             if "<node" in diff_with_missing_nodes:
                 split_diff = diff_with_missing_nodes.split("<node",1)
