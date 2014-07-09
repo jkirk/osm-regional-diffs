@@ -196,23 +196,14 @@ class PlanetOsm:
         args_convert2osm = ' --read-xml-change - outPipe.0="change" \
 --read-empty outPipe.0="empty" \
 --apply-change inPipe.0="empty" inPipe.1="change" \
---write-xml -'
-        converted_diff = self.__osmosis_call(args_convert2osm, changed_stream)
-
-        args_filter = shlex.split(osmosis_bin + ' --read-xml - \
 --tag-filter accept-ways highway=* \
 --tag-filter reject-ways highway=motorway,motorway_link,trunk,trunk_link,bus_guideway,raceway \
 --tag-filter accept-relations route=bicycle \
---write-xml -')
-        
-        verboseprint("osmosis pipe filter   start TIME: " + str(datetime.datetime.now()))
-        pf = subprocess.Popen(args_filter, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        filtered_diff = pf.communicate(converted_diff)
-        pf.stdin.close()
-        verboseprint("osmosis pipe filter   end   TIME: " + str(datetime.datetime.now()))
+--write-xml -'
+        filtered_diff = self.__osmosis_call(args_convert2osm, changed_stream)
 
         verboseprint("add missing nodes to ways without spatial information: parsing XML...")
-        root = etree.fromstring(filtered_diff[0])
+        root = etree.fromstring(filtered_diff)
         node_table = {} # python dictionary = hash table for speed. key: node-id; values: 'existing'→1,'to download'→2
         nodes_to_download = [] # extra list for performance reasons
 
@@ -287,7 +278,7 @@ class PlanetOsm:
             # → so concatenate strings: cut off tail of node file and header of diff file.
             overpass_output_tailcut = overpass_output[:-7] # remove last chars (</osm>)
             # find one of the three tags node,way,rel, split on first (assumes that all is in node-way-rel-order
-            diff_with_missing_nodes = filtered_diff[0]
+            diff_with_missing_nodes = filtered_diff
             if "<node" in diff_with_missing_nodes:
                 split_diff = diff_with_missing_nodes.split("<node",1)
                 headcut_diff = "<node" + split_diff[1]
@@ -303,39 +294,15 @@ class PlanetOsm:
 
             diff_for_boundary_cut = overpass_output_tailcut + headcut_diff
         else:
-            diff_for_boundary_cut = filtered_diff[0]
+            diff_for_boundary_cut = filtered_diff
 
-#        with open("overpass_output.osm", "w") as text_file:
-#            text_file.write(overpass_output)
-#        with open("diff_gesamt.osm", "w") as text_file1:
-#            text_file1.write(diff_for_boundary_cut)
-
-    #todo: 
-    # • simplify-change -OK
-    # • per regex <deleted> → <modified> im osc -OK
-        # • convert2xml -OK
-        # • filter tags -OK
-        # • for each way without spatial information, find a node -OK
-        # • download missing nodes via overpass -OK
-        # • merge from overpass downloaded file via osmosis → NOK, via concatenate
-        # • cut -OK
-
-
-# query to read in changed_stream
-        args = shlex.split(osmosis_bin + ' --read-xml - outPipe.0="osm" \
+        args_cutout = ' --read-xml - outPipe.0="osm" \
 --bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
---write-xml -')
+--write-xml -'
+        self.__content_diff = self.__osmosis_call(args_cutout, diff_for_boundary_cut)
 
-        verboseprint("osmosis pipe cut      start TIME: " + str(datetime.datetime.now()))
-        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        cropped_diff = p.communicate(diff_for_boundary_cut)
-        p.stdin.close()
-        verboseprint("osmosis pipe cut      end   TIME: " + str(datetime.datetime.now()))
-        devnull.close()
-        self.__content_diff = cropped_diff[0]
-
-        with open("diff_cut.osm", "w") as text_file1:
-            text_file1.write(self.__content_diff)
+#        with open("diff_cut.osm", "w") as text_file1:
+#            text_file1.write(self.__content_diff)
 
     # TODO: change to __readModifiedWaysAndRelations
     # TODO: __content_diff should be __content
@@ -381,15 +348,20 @@ class PlanetOsm:
         if root.tag == "osm":
             verboseprint("Detected osm file")
             verboseprint("way and relation ids...")
+            way_count = 0
+            rel_count = 0
             for item in root:
                 if item.tag == "way":
                     print ('WAY: ' +  item.attrib["id"])
                     print ('  http://www.openstreetmap.org/way/' + item.attrib["id"] + '/history')
                     print ('  http://www.openstreetmap.org/changeset/' + item.attrib["changeset"])
+                    way_count += 1
                 elif item.tag == "relation":
                     print ('RELATION: ' +  item.attrib["id"])
                     print ('  http://www.openstreetmap.org/relation/' + item.attrib["id"] + '/history')
                     print ('  http://www.openstreetmap.org/changeset/' + item.attrib["changeset"])
+                    rel_count += 1
+            verboseprint("way count: " + str(way_count) + " , relation count: " + str(rel_count))
         else:
             print ("ERROR: not an osm file")
 
