@@ -9,6 +9,7 @@ depends on the following:
 
 * osmosis (0.40.1+ds1-7)
 * python (2.7.5-8)
+* python-pyrss2gen
 
 Gettings started
 ----------------
