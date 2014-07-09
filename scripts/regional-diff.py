@@ -197,13 +197,6 @@ class PlanetOsm:
 --read-empty outPipe.0="empty" \
 --apply-change inPipe.0="empty" inPipe.1="change" \
 --write-xml -'
-
-        #        verboseprint("osmosis pipe convert  start TIME: " + str(datetime.datetime.now()))
-        #pc = subprocess.Popen(args_convert2osm, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
-        #converted_diff = pc.communicate(changed_stream)
-        #pc.stdin.close()
-        #verboseprint("osmosis pipe convert  end   TIME: " + str(datetime.datetime.now()))
-
         converted_diff = self.__osmosis_call(args_convert2osm, changed_stream)
 
         args_filter = shlex.split(osmosis_bin + ' --read-xml - \
