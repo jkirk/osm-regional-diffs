@@ -87,3 +87,8 @@ Put the RSS-file to your `htdocs` folder and point your favourite RSS-Client to 
 
 Please be aware that the RSS-File will be overwriten on every run of `regional-diff.py`
 
+Used libraries
+--------------
+
+* *PyRSS2Gen* (version 1.1) taken from http://www.dalkescientific.com/Python/PyRSS2Gen.html
+
