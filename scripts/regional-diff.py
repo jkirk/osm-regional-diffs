@@ -179,9 +179,11 @@ class PlanetOsm:
 --simplify-change inPipe.0="change"  \
 --write-xml-change -')
 
+        verboseprint("osmosis pipe simplify start TIME: " + str(datetime.datetime.now()))
         ps = subprocess.Popen(args_simplify, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
         simplified_diff = ps.communicate(self.__content_diff)
         ps.stdin.close()
+        verboseprint("osmosis pipe simplify end   TIME: " + str(datetime.datetime.now()))
 
         # change osm-item status from deleted to modified, because osmosis ignores deleted nodes when creating osm-file
         changed_stream = re.sub('delete>','modify>',simplified_diff[0])
@@ -193,9 +195,11 @@ class PlanetOsm:
 --apply-change inPipe.0="empty" inPipe.1="change" \
 --write-xml -')
 
+        verboseprint("osmosis pipe convert  start TIME: " + str(datetime.datetime.now()))
         pc = subprocess.Popen(args_convert2osm, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
         converted_diff = pc.communicate(changed_stream)
         pc.stdin.close()
+        verboseprint("osmosis pipe convert  end   TIME: " + str(datetime.datetime.now()))
 
         args_filter = shlex.split(osmosis_bin + ' --read-xml - \
 --tag-filter accept-ways highway=* \
@@ -203,16 +207,80 @@ class PlanetOsm:
 --tag-filter accept-relations route=bicycle \
 --write-xml -')
         
+        verboseprint("osmosis pipe filter   start TIME: " + str(datetime.datetime.now()))
         pf = subprocess.Popen(args_filter, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
         filtered_diff = pf.communicate(converted_diff[0])
         pf.stdin.close()
+        verboseprint("osmosis pipe filter   end   TIME: " + str(datetime.datetime.now()))
 
-        #todo: 
-        # • simplify-change -OK
-        # • per regex <deleted> → <modified> im osc -OK
+        verboseprint("add missing nodes to ways without spatial information: parsing XML...")
+        root = etree.fromstring(filtered_diff[0])
+        node_table = {} # python dictionary = hash table. key: node-id; values: 'existing'→1,'to download'→2
+        nodes_to_download = [] # extra list for performance reasons
+
+        if root.tag == "osm":
+            verboseprint("Detected osm file")
+            verboseprint(u"scanning for existing nodes…")
+
+            # filling hash table of nodes with existing ones
+            for item in root:
+                if item.tag == "node":
+                    node_id = item.attrib["id"]
+                    node_table[node_id] = 1
+            verboseprint("existing nodes found:" + str(len(node_table)))
+
+            # loop over ways
+            for item in root:
+                if item.tag != "way":
+                    continue
+
+                way_id = item.attrib["id"]
+                verboseprint(u"checking way-id „" + way_id + u"“")
+
+                # loop over way members (nodes)
+                way_has_spatial_information = 0
+                for member in item:
+                    if member.tag != "nd":
+                        continue
+
+                    node_id = member.attrib["ref"]
+                    if node_id in node_table:
+                        status = node_table[node_id]
+                        way_has_spatial_information = 1
+                        verboseprint("node (" + node_id + ") found, status: " + str(status))
+                        break
+
+                if way_has_spatial_information: # lack of "continue 2"
+                  continue
+                # node_id is set on last node of way, add it to download list
+                node_table[node_id] = 2
+                nodes_to_download.append(node_id)
+                verboseprint("no spatial information found, adding node " + node_id + " to list of nodes to download")
+            verboseprint("number of nodes to download: " + str(len(nodes_to_download)))
+
+        # download list nodes_to_download via overpass:
+        ql = '(\n'
+        for node in nodes_to_download:
+            ql += '  node(' + node + ');\n'
+        ql += ');\n'
+        ql += 'out meta;\n'
+
+        compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
+        ql_url = "http://overpass-api.de/api/interpreter?data=" + compact_ql
+        request = urllib2.Request(ql_url.split('?')[0], ql_url.split('?')[1])
+        response = urllib2.urlopen(request)
+        overpass_output = response.read()
+
+    
+
+    #todo: 
+    # • simplify-change -OK
+    # • per regex <deleted> → <modified> im osc -OK
         # • convert2xml -OK
-        # • filter tags
-        # • add missing nodes via overpass
+        # • filter tags -OK
+        # • for each way without spatial information, find a node -OK
+        # • download missing nodes via overpass -OK
+        # • merge from overpass downloaded file via osmosis
         # • cut -OK
 
 # original query
@@ -228,9 +296,11 @@ class PlanetOsm:
 --bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
 --write-xml -')
 
+        verboseprint("osmosis pipe cut      start TIME: " + str(datetime.datetime.now()))
         p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
         cropped_diff = p.communicate(filtered_diff[0])
         p.stdin.close()
+        verboseprint("osmosis pipe cut      end   TIME: " + str(datetime.datetime.now()))
         devnull.close()
         self.__content_diff = cropped_diff[0]
 
