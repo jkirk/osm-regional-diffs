@@ -153,9 +153,14 @@ class PlanetOsm:
     def __downloadOverpass(self, ql):
         verboseprint("Overpass-URL: " + ql.Url())
         verboseprint("Overpass-Encoded-URL: " + ql.Url())
-        request = urllib2.Request(ql.Url().split('?')[0], ql.Url().split('?')[1])
-        response = urllib2.urlopen(request)
-        self.__content_diff = response.read()
+        try:
+            request = urllib2.Request(ql.Url().split('?')[0], ql.Url().split('?')[1])
+            response = urllib2.urlopen(request)
+            self.__content_diff = response.read()
+        except:
+            e = sys.exc_info()[0]
+            print ( "Error in calling overpass server: %s" % e )
+            print ( "statement was: " + ql_url )
 
     def __loadDiffFile(self):
         f = gzip.open(self.__diffFilename, 'rb')
@@ -255,9 +260,15 @@ class PlanetOsm:
 
             compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
             ql_url = "http://overpass-api.de/api/interpreter?data=" + compact_ql
-            request = urllib2.Request(ql_url.split('?')[0], ql_url.split('?')[1])
-            response = urllib2.urlopen(request)
-            overpass_output = response.read()
+            try:
+                request = urllib2.Request(ql_url.split('?')[0], ql_url.split('?')[1])
+                response = urllib2.urlopen(request)
+                overpass_output = response.read()
+            except:
+                e = sys.exc_info()[0]
+                print ( "Error in calling overpass server: %s" % e )
+                print ( "statement was: " + ql_url )
+              
 
             root = etree.fromstring(overpass_output)
             node_counter = 0
