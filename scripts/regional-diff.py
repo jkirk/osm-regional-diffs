@@ -259,22 +259,54 @@ class PlanetOsm:
 
         diff_for_boundary_cut = filtered_diff
         if len(nodes_to_download) > 0:
-            # download list nodes_to_download via overpass:
-            ql = '(\n'
-            for node in nodes_to_download:
-                ql += '  node(' + node + ');\n'
-            ql += ');\n'
-            ql += 'out meta;\n' #only mode meta works - osmosis requires version number of elements.
+            # download list nodes_to_download via overpass, in batches of $node_batches (e.g.12K nodes are rejected by server):
+            node_batches = 1000
+            node_batch_counter = 0
+            overpass_output_array = []
+            while node_batch_counter < len(nodes_to_download):
+                start_node = node_batch_counter # used for array indexing, starts at 0
+                end_node = node_batch_counter + node_batches -1
+                if end_node >= len(nodes_to_download) : #we're at the last batch 
+                    end_node = len(nodes_to_download) -1
 
-            compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
-            ql_url = overpass_server_url + compact_ql
+                verboseprint("downloading batch of nodes, start=" + str(start_node) + ", end=" + str(end_node) )
 
-            overpass_output = self.__downloadOverpassRetVal(ql_url)
+                ql = '(\n'
+
+                node_counter = start_node
+                while node_counter <= end_node :
+                    ql += '  node(' + nodes_to_download[node_counter] + ');\n'
+                    node_counter += 1
+
+                ql += ');\n'
+                ql += 'out meta;\n' #only mode meta works - osmosis requires version number of elements.
+
+                compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
+                ql_url = overpass_server_url + compact_ql
+                overpass_output_array.append( self.__downloadOverpassRetVal(ql_url) )
+
+                node_batch_counter += node_batches
+            
+            # concatenate outputs into single xml file
+            overpass_output = '<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="Overpass API">\n'
+            verboseprint("successfully downloaded " + str(len(overpass_output_array)) + u" batches of nodes á " + str(node_batches) + " Nodes.")
+            for item in overpass_output_array :
+                if "<node" in item: #if output not empty (can happen if all nodes are deleted meanwhile)
+                    overpass_output_tailcut = item[:-7] # remove last chars ( "</osm>" )
+                    overpass_output_headcut = "  <node" + overpass_output_tailcut.split("<node",1)[1]
+                    overpass_output += overpass_output_headcut
+            overpass_output += "</osm>" #now we have a valid xml file
+
+            with open("overpass-all.osm", "w") as text_file1:
+                text_file1.write(overpass_output)
 
             try:
                 root = etree.fromstring(overpass_output)
-            except XMLSyntaxError, e:
+            except:
+                #except XMLSyntaxError, e:
+                e = sys.exc_info()[0]
                 print (e)
+                overpass_output = '<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="Overpass API">\n</osm>'
                 root = etree.fromstring(overpass_output)
 
             node_counter = 0
@@ -286,7 +318,7 @@ class PlanetOsm:
                 verboseprint("got " + str(node_counter) + " nodes from overpass") #note: overpass API does NOT return deleted nodes!
 
                 # merge overpass node answer with existing
-                # osmosis does not work, because 2nd input must be a file, and we do not want intermediary files
+                # note: osmosis does not work, because 2nd input must be a file, and we do not want intermediary files
                 # → so concatenate strings: cut off tail of node file and header of diff file.
                 overpass_output_tailcut = overpass_output[:-7] # remove last chars ( "</osm>" )
                 # find one of the three tags node,way,rel, split on first (assumes that all is in node-way-rel-order)
