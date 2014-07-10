@@ -157,7 +157,7 @@ class PlanetOsm:
     def __downloadOverpassRetVal(self, url):
         verboseprint("Overpass-URL: " + url)
 
-        overpass_output = ""
+        overpass_output = "Error"
         try:
             request = urllib2.Request(url.split('?')[0], url.split('?')[1])
             response = urllib2.urlopen(request)
@@ -283,13 +283,15 @@ class PlanetOsm:
 
                 compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
                 ql_url = overpass_server_url + compact_ql
-                overpass_output_array.append( self.__downloadOverpassRetVal(ql_url) )
+                overpass_result = self.__downloadOverpassRetVal(ql_url)
+                if overpass_result != "Error" :
+                    overpass_output_array.append (overpass_result)
 
                 node_batch_counter += node_batches
             
             # concatenate outputs into single xml file
             overpass_output = '<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="Overpass API">\n'
-            verboseprint("successfully downloaded " + str(len(overpass_output_array)) + u" batches of nodes á " + str(node_batches) + " Nodes.")
+            verboseprint("result from download: " + str(len(overpass_output_array)) + u" batch(es) of nodes á " + str(node_batches) + " Nodes.")
             for item in overpass_output_array :
                 if "<node" in item: #if output not empty (can happen if all nodes are deleted meanwhile)
                     overpass_output_tailcut = item[:-7] # remove last chars ( "</osm>" )
@@ -297,8 +299,8 @@ class PlanetOsm:
                     overpass_output += overpass_output_headcut
             overpass_output += "</osm>" #now we have a valid xml file
 
-            with open("overpass-all.osm", "w") as text_file1:
-                text_file1.write(overpass_output)
+#            with open("overpass-all.osm", "w") as text_file1:
+#                text_file1.write(overpass_output)
 
             try:
                 root = etree.fromstring(overpass_output)
@@ -311,7 +313,6 @@ class PlanetOsm:
 
             node_counter = 0
             if root.tag == "osm":
-                verboseprint("Detected osm file, overpass answer OK")
                 for item in root:
                     if item.tag == "node":
                         node_counter += 1
