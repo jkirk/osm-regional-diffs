@@ -152,16 +152,23 @@ class PlanetOsm:
         urllib.urlretrieve(diffUrl, self.__diffFilename)
 
     def __downloadOverpass(self, ql):
-        verboseprint("Overpass-URL: " + ql.Url())
-        verboseprint("Overpass-Encoded-URL: " + ql.Url())
+        self.__content_diff = self.__downloadOverpassRetVal(ql.Url())
+
+    def __downloadOverpassRetVal(self, url):
+        verboseprint("Overpass-URL: " + url)
+        verboseprint("Overpass-Encoded-URL: " + url)
+
+        overpass_output = ""
         try:
-            request = urllib2.Request(ql.Url().split('?')[0], ql.Url().split('?')[1])
+            request = urllib2.Request(url.split('?')[0], url.split('?')[1])
             response = urllib2.urlopen(request)
-            self.__content_diff = response.read()
+            overpass_output = response.read()
         except:
             e = sys.exc_info()[0]
             print ( "Error in calling overpass server: %s" % e )
             print ( "statement was: " + ql_url )
+
+        return overpass_output
 
     def __loadDiffFile(self):
         f = gzip.open(self.__diffFilename, 'rb')
@@ -263,19 +270,7 @@ class PlanetOsm:
             compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
             ql_url = overpass_server_url + compact_ql
 
-            overpass_output = "<empty/>"
-            try:
-                request = urllib2.Request(ql_url.split('?')[0], ql_url.split('?')[1])
-                response = urllib2.urlopen(request)
-                overpass_output = response.read()
-            except:
-                e = sys.exc_info()[0]
-                print ( "Error in calling overpass server: %s" % e )
-                print ( "statement was: " + ql_url )
-                print ( u"Output was: “" + overpass_output + u"”" )
-                print ( "number of nodes to download: " + str(len(nodes_to_download)))
-                print ( e.reason )
-              
+            overpass_output = self.__downloadOverpassRetVal(ql_url)
 
             try:
                 root = etree.fromstring(overpass_output)
