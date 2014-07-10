@@ -156,7 +156,6 @@ class PlanetOsm:
 
     def __downloadOverpassRetVal(self, url):
         verboseprint("Overpass-URL: " + url)
-        verboseprint("Overpass-Encoded-URL: " + url)
 
         overpass_output = ""
         try:
@@ -166,7 +165,7 @@ class PlanetOsm:
         except:
             e = sys.exc_info()[0]
             print ( "Error in calling overpass server: %s" % e )
-            print ( "statement was: " + ql_url )
+            print ( "statement was: " + url )
 
         return overpass_output
 
@@ -265,7 +264,7 @@ class PlanetOsm:
             for node in nodes_to_download:
                 ql += '  node(' + node + ');\n'
             ql += ');\n'
-            ql += 'out meta;\n' #try mode skeleton (no tags, only ids+coordinates)
+            ql += 'out meta;\n' #only mode meta works - osmosis requires version number of elements.
 
             compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
             ql_url = overpass_server_url + compact_ql
@@ -309,7 +308,6 @@ class PlanetOsm:
 
             else:
                 print ("ERROR, Overpass did not return osm file on missing node download")
-
 
         args_cutout = ' --read-xml - outPipe.0="osm" \
 --bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
