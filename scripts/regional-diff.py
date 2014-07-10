@@ -8,6 +8,7 @@ import PyRSS2Gen
 from lxml import etree
 
 osmosis_bin = "/usr/bin/osmosis"
+overpass_server_url = "http://overpass-api.de/api/interpreter?data="
 parser = argparse.ArgumentParser(\
                 formatter_class=argparse.RawDescriptionHelpFormatter,
                 description='Print report of all modified ways and relations \
@@ -104,10 +105,10 @@ class OverpassQL:
         return re.sub(r'(;|\() *', r'\1', self.QL().replace('\n', ''))
 
     def Url(self):
-        return "http://overpass-api.de/api/interpreter?data=" + self.compactQL()
+        return overpass_server_url + self.compactQL()
 
     def EncodedUrl(self):
-        return "http://overpass-api.de/api/interpreter?data=" + urllib.quote_plus(self.compactQL())
+        return overpass_server_url + urllib.quote_plus(self.compactQL())
 
 class PlanetOsm:
     __replication_url = 'http://planet.openstreetmap.org/replication/'
@@ -250,6 +251,7 @@ class PlanetOsm:
                 verboseprint("no spatial information found, adding node " + node_id + " to list of nodes to download")
             verboseprint("number of nodes to download: " + str(len(nodes_to_download)))
 
+        diff_for_boundary_cut = filtered_diff
         if len(nodes_to_download) > 0:
             # download list nodes_to_download via overpass:
             ql = '(\n'
@@ -259,7 +261,9 @@ class PlanetOsm:
             ql += 'out meta;\n' #try mode skeleton (no tags, only ids+coordinates)
 
             compact_ql = re.sub(r'(;|\() *', r'\1', ql.replace('\n', ''))
-            ql_url = "http://overpass-api.de/api/interpreter?data=" + compact_ql
+            ql_url = overpass_server_url + compact_ql
+
+            overpass_output = "<empty/>"
             try:
                 request = urllib2.Request(ql_url.split('?')[0], ql_url.split('?')[1])
                 response = urllib2.urlopen(request)
@@ -268,9 +272,17 @@ class PlanetOsm:
                 e = sys.exc_info()[0]
                 print ( "Error in calling overpass server: %s" % e )
                 print ( "statement was: " + ql_url )
+                print ( u"Output was: “" + overpass_output + u"”" )
+                print ( "number of nodes to download: " + str(len(nodes_to_download)))
+                print ( e.reason )
               
 
-            root = etree.fromstring(overpass_output)
+            try:
+                root = etree.fromstring(overpass_output)
+            except XMLSyntaxError, e:
+                print (e)
+                root = etree.fromstring(overpass_output)
+
             node_counter = 0
             if root.tag == "osm":
                 verboseprint("Detected osm file, overpass answer OK")
@@ -278,31 +290,31 @@ class PlanetOsm:
                     if item.tag == "node":
                         node_counter += 1
                 verboseprint("got " + str(node_counter) + " nodes from overpass") #note: overpass API does NOT return deleted nodes!
+
+                # merge overpass node answer with existing
+                # osmosis does not work, because 2nd input must be a file, and we do not want intermediary files
+                # → so concatenate strings: cut off tail of node file and header of diff file.
+                overpass_output_tailcut = overpass_output[:-7] # remove last chars ( "</osm>" )
+                # find one of the three tags node,way,rel, split on first (assumes that all is in node-way-rel-order)
+                diff_with_missing_nodes = filtered_diff
+                if "<node" in diff_with_missing_nodes:
+                    split_diff = diff_with_missing_nodes.split("<node",1)
+                    headcut_diff = "<node" + split_diff[1]
+                elif "<way" in diff_with_missing_nodes:   # very unprobable case for no nodes in changeset
+                    split_diff = diff_with_missing_nodes.split("<way",1)
+                    headcut_diff = "<way" + split_diff[1]
+                elif "<relation" in diff_with_missing_nodes: # very very nprobable case for no ways in changeset
+                    split_diff = diff_with_missing_nodes.split("<relation",1)
+                    headcut_diff = "<relation" + split_diff[1]
+                else:
+                    print ("Error in changeset split: empty changeset found")
+                    headcut_diff = "</osm>"
+
+                diff_for_boundary_cut = overpass_output_tailcut + headcut_diff
+
             else:
                 print ("ERROR, Overpass did not return osm file on missing node download")
 
-            # merge overpass node answer with existing
-            # osmosis does not work, because 2nd input must be a file, and we do not want intermediary files
-            # → so concatenate strings: cut off tail of node file and header of diff file.
-            overpass_output_tailcut = overpass_output[:-7] # remove last chars ( "</osm>" )
-            # find one of the three tags node,way,rel, split on first (assumes that all is in node-way-rel-order)
-            diff_with_missing_nodes = filtered_diff
-            if "<node" in diff_with_missing_nodes:
-                split_diff = diff_with_missing_nodes.split("<node",1)
-                headcut_diff = "<node" + split_diff[1]
-            elif "<way" in diff_with_missing_nodes:   # very unprobable case for no nodes in changeset
-                split_diff = diff_with_missing_nodes.split("<way",1)
-                headcut_diff = "<way" + split_diff[1]
-            elif "<relation" in diff_with_missing_nodes: # very very nprobable case for no ways in changeset
-                split_diff = diff_with_missing_nodes.split("<relation",1)
-                headcut_diff = "<relation" + split_diff[1]
-            else:
-                print ("Error in changeset split: empty changeset found")
-                headcut_diff = "</osm>"
-
-            diff_for_boundary_cut = overpass_output_tailcut + headcut_diff
-        else:
-            diff_for_boundary_cut = filtered_diff
 
         args_cutout = ' --read-xml - outPipe.0="osm" \
 --bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
