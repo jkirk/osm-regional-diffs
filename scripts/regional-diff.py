@@ -174,7 +174,7 @@ class PlanetOsm:
         f = open(self.__minutelyOsmFilename, 'rb')
         self.__content_diff = f.read()
         f.close()
-    def __osmosis_call(self,args, input_data):
+    def __osmosisCall(self,args, input_data):
         devnull = open('/dev/null', 'w')
         verboseprint(u"osmosis call „" + args + u"“ started, TIME: " + str(datetime.datetime.now()))
         exe_and_args = shlex.split(osmosis_bin + args)
@@ -192,7 +192,7 @@ class PlanetOsm:
         args_simplify = ' --read-xml-change - outPipe.0="change" \
 --simplify-change inPipe.0="change"  \
 --write-xml-change -'
-        simplified_diff = self.__osmosis_call(args_simplify, self.__content_diff)
+        simplified_diff = self.__osmosisCall(args_simplify, self.__content_diff)
         
         # change osm-item status from deleted to modified, because osmosis ignores deleted items when creating osm-file
         changed_stream = re.sub('delete>','modify>',simplified_diff)
@@ -204,7 +204,7 @@ class PlanetOsm:
 --tag-filter reject-ways highway=motorway,motorway_link,trunk,trunk_link,bus_guideway,raceway \
 --tag-filter accept-relations route=bicycle \
 --write-xml -'
-        filtered_diff = self.__osmosis_call(args_convert2osm, changed_stream)
+        filtered_diff = self.__osmosisCall(args_convert2osm, changed_stream)
 
         verboseprint("add missing nodes to ways without spatial information: parsing XML...")
         root = etree.fromstring(filtered_diff)
@@ -319,7 +319,7 @@ class PlanetOsm:
         args_cutout = ' --read-xml - outPipe.0="osm" \
 --bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
 --write-xml -'
-        self.__content_diff = self.__osmosis_call(args_cutout, diff_for_boundary_cut)
+        self.__content_diff = self.__osmosisCall(args_cutout, diff_for_boundary_cut)
 
 #        with open("diff_cut.osm", "w") as text_file1:
 #            text_file1.write(self.__content_diff)
