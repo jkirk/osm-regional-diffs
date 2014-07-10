@@ -342,8 +342,10 @@ class PlanetOsm:
             else:
                 print ("ERROR, Overpass did not return osm file on missing node download")
 
+        regionfile = os.path.dirname(__file__) + "/vorarlberg.poly"
+
         args_cutout = ' --read-xml - outPipe.0="osm" \
---bounding-polygon inPipe.0="osm" file="vorarlberg.poly" \
+--bounding-polygon inPipe.0="osm" file="' + regionfile + '" \
 --write-xml -'
         self.__content_diff = self.__osmosisCall(args_cutout, diff_for_boundary_cut)
 
