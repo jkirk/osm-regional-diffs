@@ -5,6 +5,7 @@ from __future__ import print_function
 import argparse, urllib, urllib2, re, gzip, subprocess, os, sys, shlex
 import datetime
 import PyRSS2Gen
+import tempfile
 from lxml import etree
 
 osmosis_bin = "/usr/bin/osmosis"
@@ -180,6 +181,7 @@ class PlanetOsm:
         f = open(self.__minutelyOsmFilename, 'rb')
         self.__content_diff = f.read()
         f.close()
+
     def __osmosisCall(self,args, input_data):
         devnull = open('/dev/null', 'w')
         verboseprint(u"osmosis call „" + args + u"“ started, TIME: " + str(datetime.datetime.now()))
@@ -193,6 +195,7 @@ class PlanetOsm:
 
     def __osmosis(self):
         if not os.path.isfile(osmosis_bin):
+            print ("WARNING: " + osmosis_bin + " not found!")
             return
 
         args_simplify = ' --read-xml-change - outPipe.0="change" \
@@ -445,16 +448,39 @@ class PlanetOsm:
         rss_link = "http://www.openstreetmap.org/changeset/" + str(max_changeset)
         rssitems.append(PyRSS2Gen.RSSItem(title = rss_title, link = rss_link, description = rss_description))
         rss = PyRSS2Gen.RSS2(
-        title = "Regional Diff feed",
-        link = "https://github.com/jkirk/osm-regional-diffs",
-        description='All modified ways and relations \
+            title = "Regional Diff feed",
+            link = "https://github.com/jkirk/osm-regional-diffs",
+            description='All modified ways and relations \
 from Vorarlberg of the latest minutely replication diff file \
 from planet.openstreetmap.org (or by a given diff file)',
-        lastBuildDate = datetime.datetime.utcnow(),
-        items = rssitems
+            lastBuildDate = datetime.datetime.utcnow(),
+            items = rssitems
         )
 
-        rss.write_xml(open(args.rss_file, "w"))
+        self.__appendToRssFile(rss)
+
+    def __appendToRssFile(self, rss):
+        if os.path.isfile(args.rss_file):
+            rss_temp = tempfile.TemporaryFile()
+            rss.write_xml(rss_temp)
+            rss_temp.seek(0)
+            xml_temp = rss_temp.read()
+
+            root_temp = etree.fromstring(xml_temp)
+            appenditem = ""
+            channel = root_temp.find("channel")
+            appenditem = channel.find("item")
+
+            rss_file = open(args.rss_file, 'rb')
+
+            tree = etree.parse(rss_file)
+            rss_root = tree.getroot()
+            channel = rss_root.find("channel")
+            channel.append(appenditem)
+
+            tree.write(args.rss_file)
+        else:
+            rss.write_xml(open(args.rss_file, "w"))
 
     def __splitSequenceNumber(self, x):
         m = re.search('(...)(...)(...)', self.sequenceNumber.zfill(9))
