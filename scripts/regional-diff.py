@@ -417,21 +417,33 @@ class PlanetOsm:
         rssitems = []
         verboseprint("parsing XML...")
         root = etree.fromstring(self.__content_diff)
+        rss_description = ""
+        max_changeset = -1
+        max_changeset_timestamp = ""
+        min_changeset = -1
+        min_changeset_timestamp = ""
         if root.tag == "osm":
             verboseprint("Detected osm file")
             verboseprint("way and relation ids...")
             for item in root:
-                if item.tag == "way":
-                    title = "Modified way: " + item.attrib["id"]
-                    link = 'http://www.openstreetmap.org/way/' + item.attrib["id"] + '/history'
-                    rssitems.append(PyRSS2Gen.RSSItem(title = title, link = link))
-                elif item.tag == "relation":
-                    title = "Modified relation: " + item.attrib["id"]
-                    link = 'http://www.openstreetmap.org/relation/' + item.attrib["id"] + '/history'
-                    rssitems.append(PyRSS2Gen.RSSItem(title = title, link = link))
+                if item.tag == "way" or item.tag == "relation":
+                    if item.attrib["changeset"] > max_changeset:
+                        max_changeset = item.attrib["changeset"]
+                        max_changeset_timestamp = item.attrib["timestamp"]
+                    if item.attrib["changeset"] < min_changeset or min_changeset == -1:
+                        min_changeset = item.attrib["changeset"]
+                        min_changeset_timestamp = item.attrib["timestamp"]
+                    rss_description += "Modified " + item.tag + ": " + item.attrib["id"] + "<br>"
+                    rss_description += '<a href="http://www.openstreetmap.org/' + item.tag + '/' + item.attrib["id"] + '/history">'
+                    rss_description += 'http://www.openstreetmap.org/' + item.tag + '/' + item.attrib["id"] + '/history</a><br>'
+                    rss_description += '<a href="http://www.openstreetmap.org/changeset/' + item.attrib["changeset"] + '">'
+                    rss_description += 'http://www.openstreetmap.org/changeset/' + item.attrib["changeset"] + '</a><br>'
         else:
             print ("ERROR: not an osm file")
 
+        rss_title = "Changes between " + min_changeset_timestamp + " and " + max_changeset_timestamp
+        rss_link = "http://www.openstreetmap.org/changeset/" + str(max_changeset)
+        rssitems.append(PyRSS2Gen.RSSItem(title = rss_title, link = rss_link, description = rss_description))
         rss = PyRSS2Gen.RSS2(
         title = "Regional Diff feed",
         link = "https://github.com/jkirk/osm-regional-diffs",
