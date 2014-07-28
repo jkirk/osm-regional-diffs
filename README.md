@@ -93,6 +93,12 @@ The RSS-File with an RSS-Item is only created if modification exist (in
 Vorarlberg). An RSS-Item (of a modification) is created and appended on every
 run of `regional-diff.py` (even if the modification is part of a previous item).
 
+Note
+----
+
+Please note that processing a daily-diff file is a very CPU and memory hungry
+task. Working with less than 16GB of RAM could cause the script to crash.
+
 Used libraries
 --------------
 
