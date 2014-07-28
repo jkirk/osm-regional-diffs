@@ -34,7 +34,7 @@ report to stdout (default)")
 output.add_argument("--ids-only", action="store_true", help="output all way and \
 relation IDs from given diff")
 output.add_argument("--ql-only", action="store_true", help="output Overpass QL")
-output.add_argument("--rss-file", action="store", help="output report as rss file")
+output.add_argument("--rss-file", action="store", help="output / append report as rss file")
 args = parser.parse_args()
 
 # Verbose print function taken from: http://stackoverflow.com/a/5980173
