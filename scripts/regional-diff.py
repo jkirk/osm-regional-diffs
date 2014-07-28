@@ -412,6 +412,8 @@ class PlanetOsm:
                     print ('  http://www.openstreetmap.org/relation/' + item.attrib["id"] + '/history')
                     print ('  http://www.openstreetmap.org/changeset/' + item.attrib["changeset"])
                     rel_count += 1
+            if way_count == 0 or rel_count == 0:
+                    print ('NONE.')
             verboseprint("way count: " + str(way_count) + " , relation count: " + str(rel_count))
         else:
             print ("ERROR: not an osm file")
@@ -425,6 +427,7 @@ class PlanetOsm:
         max_changeset_timestamp = ""
         min_changeset = -1
         min_changeset_timestamp = ""
+        item_count = 0
         if root.tag == "osm":
             verboseprint("Detected osm file")
             verboseprint("way and relation ids...")
@@ -441,8 +444,12 @@ class PlanetOsm:
                     rss_description += 'http://www.openstreetmap.org/' + item.tag + '/' + item.attrib["id"] + '/history</a><br>'
                     rss_description += '<a href="http://www.openstreetmap.org/changeset/' + item.attrib["changeset"] + '">'
                     rss_description += 'http://www.openstreetmap.org/changeset/' + item.attrib["changeset"] + '</a><br>'
+                    item_count += 1
         else:
             print ("ERROR: not an osm file")
+
+        if item_count == 0:
+            return
 
         rss_title = "Changes between " + min_changeset_timestamp + " and " + max_changeset_timestamp
         rss_link = "http://www.openstreetmap.org/changeset/" + str(max_changeset)
