@@ -179,4 +179,32 @@ Show only ways (from a given list of ways) which are part of a bicycle route
   way for our task is to select only the parent ways for all nodes from the input
   set with *way(bn*);
 
+Thu 10 Jul 16:04:02 CEST 2014 (and before) -MM
+==============================================
+Problems fixed:
+• Ways without node-changes have no spatial information in diff file, so get removed by crop
+    · pick a node for each way missing spatial information
+    · download them via overpass in bulk
+        · there was need to limit the download to only 1000 nodes at once, and merge the results later
+    · merge them into osm-file before crop
 
+• filter out non-highway ways with osmosis instead of overpass → reduces load on overpass server
+    · allow only highway types with --tag-filter that are allowed for bicyclists
+
+• added handling of deleted ways: osmosis removes deleted items when converting osc→osm
+    ·  regex <deleted> → <modified> in osc after simplify change → fixed it.
+
+Testcases:
+• ./regional-diff.py -f minutely-796.osc.gz 
+    this includes changeset http://www.openstreetmap.org/api/0.6/changeset/24005065 from user species
+  there should be 89 ways and 2 relations (all from this changeset)
+• ./regional-diff.py -f scripts/637.osc.gz
+  there should be 5 ways and 2 relations
+
+Notes for the future :
+
+• overpass API does NOT return deleted nodes.
+  · for ways without spatial information, some nodes (if deleted meanwhile on the server) will not come back on overpass quere → way gets removed (wrongly) on crop
+  But: this should happen only (rareley) on fresh changesets.
+
+• if a relation modified is only sorted or tag-changed without having modified members in the changesets, this is not reported.

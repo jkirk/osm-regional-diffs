@@ -38,7 +38,7 @@ View the help message output:
 	  --report              output report to stdout (default)
 	  --ids-only            output all way and relation IDs from given diff
 	  --ql-only             output Overpass QL
-	  --rss-file RSS_FILE   output report as rss file
+	  --rss-file RSS_FILE   output / append report as rss file
 
 `regional-diff.py` by default reports ways and relations with bicylce-tags[1] in
 Vorarlberg which were modified in the last minute.
@@ -80,11 +80,28 @@ created on `#Wed Jun 25 20:02:07 UTC 2014`. This should be the sample output:
 	  http://www.openstreetmap.org/relation/116941/history
 	  http://www.openstreetmap.org/changeset/23158682	
 
+RSS-Feed
+--------
+
 To generate an RSS-file run:
 
 	$ scripts/regional-diff.py -f scripts/637.osc.gz --rss-file regional-diff.rss
 
-Put the RSS-file to your `htdocs` folder and point your favourite RSS-Client to that URL to subscribe that feed.
+Put the RSS-file to your `htdocs` folder and point your favourite RSS-Client to
+that URL to subscribe that feed.
 
-Please be aware that the RSS-File will be overwriten on every run of `regional-diff.py`
+The RSS-File with an RSS-Item is only created if modification exist (in
+Vorarlberg). An RSS-Item (of a modification) is created and appended on every
+run of `regional-diff.py` (even if the modification is part of a previous item).
+
+Note
+----
+
+Please note that processing a daily-diff file is a very CPU and memory hungry
+task. Working with less than 16GB of RAM could cause the script to crash.
+
+Used libraries
+--------------
+
+* *PyRSS2Gen* (version 1.1) taken from http://www.dalkescientific.com/Python/PyRSS2Gen.html
 
