@@ -419,6 +419,7 @@ class PlanetOsm:
             print ("ERROR: not an osm file")
 
     def generateRssFeed(self):
+        verboseprint("generating rss-item...")
         rssitems = []
         verboseprint("parsing XML...")
         root = etree.fromstring(self.__content_diff)
@@ -449,6 +450,7 @@ class PlanetOsm:
             print ("ERROR: not an osm file")
 
         if item_count == 0:
+            verboseprint("no rss-items generated (no items exists)")
             return
 
         rss_title = "Changes between " + min_changeset_timestamp + " and " + max_changeset_timestamp
@@ -468,6 +470,7 @@ from planet.openstreetmap.org (or by a given diff file)',
 
     def __appendToRssFile(self, rss):
         if os.path.isfile(args.rss_file):
+            verboseprint("append rss-item to existing rss file...")
             rss_temp = tempfile.TemporaryFile()
             rss.write_xml(rss_temp)
             rss_temp.seek(0)
@@ -483,10 +486,11 @@ from planet.openstreetmap.org (or by a given diff file)',
             tree = etree.parse(rss_file)
             rss_root = tree.getroot()
             channel = rss_root.find("channel")
-            channel.append(appenditem)
+            channel.insert(0, appenditem)
 
             tree.write(args.rss_file)
         else:
+            verboseprint("writing rss-item to new rss file...")
             rss.write_xml(open(args.rss_file, "w"))
 
     def __splitSequenceNumber(self, x):
