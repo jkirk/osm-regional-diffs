@@ -1,8 +1,7 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-`
 
-from __future__ import print_function
-import argparse, urllib, urllib2, re, gzip, subprocess, os, sys, shlex
+import argparse, urllib.request, urllib.parse, urllib.error, urllib.request, urllib.error, urllib.parse, re, gzip, subprocess, os, sys, shlex
 import datetime
 import PyRSS2Gen
 import tempfile
@@ -43,7 +42,7 @@ if args.verbose:
         # Print each argument separately so caller doesn't need to
         # stuff everything to be printed into a single string
         print ("VERBOSE:", *args, file=sys.stderr)
-else:   
+else:
     verboseprint = lambda *a: None      # do-nothing function
 
 class OverpassQL:
@@ -109,7 +108,7 @@ class OverpassQL:
         return overpass_server_url + self.compactQL()
 
     def EncodedUrl(self):
-        return overpass_server_url + urllib.quote_plus(self.compactQL())
+        return overpass_server_url + urllib.parse.quote_plus(self.compactQL())
 
 class PlanetOsm:
     __replication_url = 'http://planet.openstreetmap.org/replication/'
@@ -133,7 +132,7 @@ class PlanetOsm:
     def __downloadStateFile(self):
         verboseprint("Downloading state.txt...")
         verboseprint("URL: " + self.__state_url)
-        response = urllib2.urlopen(self.__state_url)
+        response = urllib.request.urlopen(self.__state_url)
         self.__content_state = response.read()
         verboseprint("Timestamp of state.txt:", self.__content_state.splitlines()[0])
         verboseprint("Sequencenumber of state.txt:", self.__content_state.splitlines()[1])
@@ -150,7 +149,7 @@ class PlanetOsm:
         verboseprint("URL of latest minutely diff:", diffUrl)
         verboseprint("Downloading " + self.__diffFilename + "...")
 
-        urllib.urlretrieve(diffUrl, self.__diffFilename)
+        urllib.request.urlretrieve(diffUrl, self.__diffFilename)
 
     def __downloadOverpass(self, ql):
         self.__content_diff = self.__downloadOverpassRetVal(ql.Url())
@@ -160,8 +159,8 @@ class PlanetOsm:
 
         overpass_output = "Error"
         try:
-            request = urllib2.Request(url.split('?')[0], url.split('?')[1])
-            response = urllib2.urlopen(request)
+            request = urllib.request.Request(url.split('?')[0], url.split('?')[1])
+            response = urllib.request.urlopen(request)
             overpass_output = response.read()
         except:
             e = sys.exc_info()[0]
@@ -184,7 +183,7 @@ class PlanetOsm:
 
     def __osmosisCall(self,args, input_data):
         devnull = open('/dev/null', 'w')
-        verboseprint(u"osmosis call „" + args + u"“ started, TIME: " + str(datetime.datetime.now()))
+        verboseprint("osmosis call „" + args + "“ started, TIME: " + str(datetime.datetime.now()))
         exe_and_args = shlex.split(osmosis_bin + args)
         p = subprocess.Popen(exe_and_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=devnull)
         output_data = p.communicate(input_data)
@@ -202,7 +201,7 @@ class PlanetOsm:
 --simplify-change inPipe.0="change"  \
 --write-xml-change -'
         simplified_diff = self.__osmosisCall(args_simplify, self.__content_diff)
-        
+
         # change osm-item status from deleted to modified, because osmosis ignores deleted items when creating osm-file
         changed_stream = re.sub('delete>','modify>',simplified_diff)
 
@@ -222,7 +221,7 @@ class PlanetOsm:
 
         if root.tag == "osm":
             verboseprint("Detected osm file")
-            verboseprint(u"scanning for existing nodes…")
+            verboseprint("scanning for existing nodes…")
 
             # filling hash table of nodes with existing ones
             for item in root:
@@ -237,7 +236,7 @@ class PlanetOsm:
                     continue
 
                 way_id = item.attrib["id"]
-                verboseprint(u"checking way-id „" + way_id + u"“")
+                verboseprint("checking way-id „" + way_id + "“")
 
                 # loop over way members (nodes)
                 way_has_spatial_information = 0
@@ -269,7 +268,7 @@ class PlanetOsm:
             while node_batch_counter < len(nodes_to_download):
                 start_node = node_batch_counter # used for array indexing, starts at 0
                 end_node = node_batch_counter + node_batches -1
-                if end_node >= len(nodes_to_download) : #we're at the last batch 
+                if end_node >= len(nodes_to_download) : #we're at the last batch
                     end_node = len(nodes_to_download) -1
 
                 verboseprint("downloading batch of nodes, start=" + str(start_node) + ", end=" + str(end_node) )
@@ -291,10 +290,10 @@ class PlanetOsm:
                     overpass_output_array.append (overpass_result)
 
                 node_batch_counter += node_batches
-            
+
             # concatenate outputs into single xml file
             overpass_output = '<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="Overpass API">\n'
-            verboseprint("result from download: " + str(len(overpass_output_array)) + u" batch(es) of nodes á " + str(node_batches) + " Nodes.")
+            verboseprint("result from download: " + str(len(overpass_output_array)) + " batch(es) of nodes á " + str(node_batches) + " Nodes.")
             for item in overpass_output_array :
                 if "<node" in item: #if output not empty (can happen if all nodes are deleted meanwhile)
                     overpass_output_tailcut = item[:-7] # remove last chars ( "</osm>" )

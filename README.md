@@ -4,12 +4,29 @@ Regional Diffs
 Prerequisites
 -------------
 
-`regional-diff.py` has been developed on a Debian/jessie GNU/Linux system and
-depends on the following:
+`regional-diff.py` has been developed and tested on a Debian/jessie GNU/Linux system with the following dependencies:
 
 * osmosis (0.40.1+ds1-7)
 * python (2.7.5-8)
-* python-pyrss2gen
+* python-lxml (3.4.0-1)
+* python-pyrss2gen (1.1-1)
+
+It has been converted to Python3 with [2to3](https://docs.python.org/3/library/2to3.html) on a Debian/bookwork GNU/Linux system and should work with the following package versions:
+
+* osmosis (0.48.3-2)
+* python3 (3.11.2-1+b1)
+* python3-lxml (4.9.2-1+b1)
+* python3-pyrss2gen (1.1-2)
+
+Podman
+------
+
+To run the `regional-diff.py` via Podman an image can be created and the container started like so:
+
+```
+❯ podman build --tag=osm-regional-diff -f Dockerfile
+❯ podman run --rm -it -v $(pwd):/code osm-regional-diff /bin/bash
+```
 
 Gettings started
 ----------------
